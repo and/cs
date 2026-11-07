@@ -62,6 +62,34 @@
   .credit a:hover { color:var(--ink); border-bottom-color:var(--ink); }
   body.panel-open .credit { left:calc((100% - 448px) / 2); }
   @media (max-width: 760px) { .credit { bottom:8px; font-size:9.5px; } body.panel-open .credit { display:none; } }
+  /* autoplay */
+  #caption { position:fixed; left:50%; bottom:86px; transform:translate(-50%, 8px); width:min(620px, calc(100% - 40px)); text-align:center;
+    background:rgba(255,255,255,.9); backdrop-filter:blur(6px); border-radius:16px; padding:14px 20px 16px; opacity:0; pointer-events:none;
+    transition:opacity .5s, transform .5s; z-index:6; box-shadow:0 8px 30px rgba(20,20,40,.06); }
+  #caption.show { opacity:1; transform:translate(-50%, 0); }
+  #caption .k { font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); }
+  #caption .t { font-size:26px; font-weight:800; letter-spacing:-.025em; margin:5px 0 4px; }
+  #caption .d { font-size:14.5px; line-height:1.5; color:#3a3a42; }
+  #player { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); display:none; align-items:center; gap:4px; background:var(--ink); color:#fff;
+    border-radius:999px; padding:6px 8px; z-index:7; box-shadow:0 10px 30px rgba(0,0,0,.18); }
+  body.autoplay #player { display:flex; }
+  #player button { display:grid; place-items:center; border:0; background:transparent; color:#fff; width:34px; height:34px; border-radius:50%; font-size:13px; }
+  #player button:hover { background:rgba(255,255,255,.12); }
+  #player .pp { background:#fff; color:var(--ink); font-size:11px; letter-spacing:-.1em; }
+  #player .pp:hover { background:#e8e8ee; }
+  #player .spd { width:auto; padding:0 10px; border-radius:999px; font-family:var(--mono); font-size:11.5px; }
+  .pinfo { width:190px; padding:0 8px; }
+  .pt { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.85; }
+  .pbar { height:3px; background:rgba(255,255,255,.2); border-radius:3px; margin-top:6px; overflow:hidden; }
+  .pbar i { display:block; height:100%; width:0; background:#fff; border-radius:3px; }
+  body.autoplay .credit, body.autoplay .hint { opacity:0; pointer-events:none; }
+  body.panel-open #player, body.panel-open #caption { left:calc((100% - 448px) / 2); }
+  body.auto-paused #caption { opacity:.55; }
+  @media (max-width: 760px) {
+    #player { bottom:10px; } .pinfo { width:120px; }
+    #caption { bottom:70px; } #caption .t { font-size:21px; } #caption .d { font-size:13px; }
+    body.panel-open #player, body.panel-open #caption { left:50%; }
+  }
   /* search */
   .search { position:fixed; top:14px; left:50%; transform:translateX(-50%); width:min(380px, calc(100vw - 420px)); z-index:12; }
   .search input { width:100%; font:inherit; font-size:14px; padding:10px 14px 10px 36px; border:1px solid var(--line); border-radius:999px;
@@ -175,6 +203,7 @@ window.addEventListener('error', function (e) {
 </div>
 <div class="topright">
   <div class="chip" id="progress"><b>0</b> / 19 understood</div>
+  <button class="chip" id="playBtn">▶ Play tour</button>
   <button class="chip" id="listBtn">☰ List view</button>
 </div>
 
@@ -184,6 +213,7 @@ window.addEventListener('error', function (e) {
   <p><b>19 data structures</b>, each a cluster. Every one branches into its <b>operations and costs</b>, <b>when to use it</b>, the <b>patterns</b> interviewers test, <b>practice problems</b> and <b>pitfalls</b>. Follow the learning path in order, or wander.</p>
   <div class="ctas">
     <button class="btn dark" id="startBtn">▶ Start the learning path</button>
+    <button class="btn" id="playHero">▶ Watch it play</button>
     <button class="btn" id="exploreBtn">Explore the map</button>
   </div>
   <div class="legend" id="legend"></div>
@@ -193,6 +223,15 @@ window.addEventListener('error', function (e) {
 <div class="hint">Drag to look around · scroll to fly · click a structure</div>
 <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
 
+<div id="caption" aria-live="polite"><div class="k"></div><div class="t"></div><div class="d"></div></div>
+<div id="player" role="toolbar" aria-label="Tour controls">
+  <button data-p="prev" title="Previous structure (←)"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1.5" width="1.8" height="9" rx=".5"/><path d="M11 1.8v8.4a.5.5 0 0 1-.78.42L4.2 6.42a.5.5 0 0 1 0-.84l6.02-4.2a.5.5 0 0 1 .78.42z"/></svg></button>
+  <button data-p="toggle" class="pp" title="Pause (space)"></button>
+  <button data-p="next" title="Next structure (→)"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="9.2" y="1.5" width="1.8" height="9" rx=".5"/><path d="M1 1.8v8.4a.5.5 0 0 0 .78.42L7.8 6.42a.5.5 0 0 0 0-.84L1.78 1.38A.5.5 0 0 0 1 1.8z"/></svg></button>
+  <div class="pinfo"><div class="pt"></div><div class="pbar"><i></i></div></div>
+  <button data-p="speed" class="spd" title="Speed">1×</button>
+  <button data-p="stop" title="Stop tour (Esc)">✕</button>
+</div>
 <aside id="panel" aria-live="polite"></aside>
 <div id="list"></div>
 <div id="tip"></div>
