@@ -1,0 +1,16 @@
+{
+  "name": "ds-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A 3D, explorable map of data structures for interview prep.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}
