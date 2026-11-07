@@ -676,6 +676,7 @@ function syncPlayer() {
   pb.classList.toggle('off', !auto.showPanel); pb.title = (auto.showPanel ? 'Hide' : 'Show') + ' side panel (P)';
   cb.classList.toggle('off', !auto.showCaps); cb.title = (auto.showCaps ? 'Hide' : 'Show') + ' captions (C)';
   document.body.classList.toggle('no-caps', !auto.showCaps);
+  syncPlayBtn();
   document.body.classList.toggle('auto-paused', auto.active && !auto.playing);
   if (!auto.playing) document.body.classList.remove('idle'); else wake();
 }
@@ -705,9 +706,13 @@ function setTourCaps(v) {
   auto.showCaps = v; try { localStorage.setItem('dsmap-tour-caps', v ? 'on' : 'off'); } catch (e) {}
   syncPlayer();
 }
+function syncPlayBtn() {
+  const b = document.getElementById('playBtn');
+  b.textContent = !auto.active ? '▶ Play tour' : auto.playing ? '❚❚ Pause tour' : '▶ Resume tour';
+}
 function stopAuto() {
   auto.active = false; auto.playing = false; clearFlash(); pulse.until = 0;
-  capEl.classList.remove('show'); document.body.classList.remove('autoplay', 'auto-paused', 'idle');
+  capEl.classList.remove('show'); document.body.classList.remove('autoplay', 'auto-paused', 'idle'); syncPlayBtn();
 }
 function autoJump(dir) {
   const cur = ORDER.indexOf(DS[STEPS[auto.i].bi].id);

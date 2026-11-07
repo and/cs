@@ -18,6 +18,10 @@ Every structure also has a short Python snippet and links to related structures.
 - "Mark as understood" progress, saved in your browser
 - Each structure has its own link, for example `index.html#heap`
 - List view for reading rather than exploring in 3D
+- **Play tour**: a slow, film-like walk through all 19 structures with captions and section highlights. Use pause, prev/next, speed (0.5×–2×), and toggles to hide the side panel (`P`) or captions (`C`)
+- **Dark mode** (`D`) with glowing nodes and a starfield, plus fullscreen (`F`). During the tour, controls and the cursor fade out after 3 seconds, so it works well on a TV
+
+Keyboard: `/` search · `Space` play/pause · `← →` previous/next · `Esc` stop or close · `D` dark mode · `F` fullscreen
 
 ## Run it
 
