@@ -17,6 +17,7 @@ const norm = (p) => { const l = Math.hypot(p[0], p[1], p[2]) || 1; return [p[0] 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ease = (k) => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 const isWide = () => innerWidth > 760;
+const uiScale = () => Math.max(1, Math.min(1.7, innerWidth / 1500));
 const byId = Object.fromEntries(DS.map((d, i) => [d.id, i]));
 const cxClass = (c) => /O\(1\)|α/.test(c) ? 'g' : /log/.test(c) ? 't' : /²/.test(c) ? 'b' : 'm';
 
@@ -135,6 +136,39 @@ mGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3).setUsage(THREE.Dyn
 const mids = new THREE.Points(mGeo, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true })); mids.frustumCulled = false;
 scene.add(edges, mids, mesh);
 
+// dark-mode extras: soft additive glow behind every node, and a distant starfield
+const glowTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(.25, 'rgba(255,255,255,.45)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+})();
+const coreIdx = nodes.map((n, i) => n.kind === 'core' ? i : -1).filter((i) => i >= 0);
+const restIdx = nodes.map((n, i) => n.kind !== 'core' ? i : -1).filter((i) => i >= 0);
+function makeGlow(idx, size) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * idx.length), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(3 * idx.length), 3).setUsage(THREE.DynamicDrawUsage));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ size, map: glowTex, vertexColors: true, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+  p.frustumCulled = false; p.visible = false; p.userData.idx = idx; return p;
+}
+const glows = [makeGlow(coreIdx, 70), makeGlow(restIdx, 22)];
+const stars = (() => {
+  const R = rng('stars'), n = 1800, pos = new Float32Array(3 * n), col = new Float32Array(3 * n);
+  for (let i = 0; i < n; i++) {
+    const u = R() * 2 - 1, th = R() * Math.PI * 2, rr = 2600 + R() * 2400, s = Math.sqrt(1 - u * u);
+    pos[3 * i] = CLOUD.x + Math.cos(th) * s * rr; pos[3 * i + 1] = CLOUD.y + u * rr; pos[3 * i + 2] = CLOUD.z + Math.sin(th) * s * rr;
+    const b = .25 + .55 * R(); col[3 * i] = b * .85; col[3 * i + 1] = b * .9; col[3 * i + 2] = b;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, depthWrite: false }));
+  p.visible = false; return p;
+})();
+scene.add(stars, ...glows);
+
 // per-frame motion: each cluster drifts and wobbles slowly
 const world = new Float32Array(3 * N);
 const pulse = { set: new Set(), until: 0 };
@@ -164,12 +198,18 @@ function step(t) {
     }
   }
   eGeo.attributes.position.needsUpdate = true; mGeo.attributes.position.needsUpdate = true;
+  if (dark) for (const gl of glows) {
+    const arr = gl.geometry.attributes.position.array, idx = gl.userData.idx;
+    for (let k = 0; k < idx.length; k++) { const n = idx[k]; arr[3 * k] = world[3 * n]; arr[3 * k + 1] = world[3 * n + 1]; arr[3 * k + 2] = world[3 * n + 2]; }
+    gl.geometry.attributes.position.needsUpdate = true;
+  }
 }
 const posOf = (n, out) => out.set(world[3 * n], world[3 * n + 1], world[3 * n + 2]);
 const centerOf = (bi, out) => out.copy(CENTERS[bi]).add(drift[bi]);
 
 // colour state: fade everything not in focus towards white
-const WHITE = new THREE.Color(0xffffff), EDGE = new THREE.Color('#DCDCE4'), MID = new THREE.Color('#A6BDEE'), REL = new THREE.Color('#E6E6EE');
+const BGC = new THREE.Color(0xffffff), EDGE = new THREE.Color('#DCDCE4'), MID = new THREE.Color('#A6BDEE'), REL = new THREE.Color('#E6E6EE');
+let edgeTint = .18;
 const _c = new THREE.Color();
 let selected = -1, hovered = -1, paintKey = '';
 function fadeFor(bi) {
@@ -180,23 +220,47 @@ function fadeFor(bi) {
 function paint() {
   const key = selected + ':' + hovered; if (key === paintKey) return; paintKey = key;
   const f = brains.map((_, i) => fadeFor(i));
-  for (let n = 0; n < N; n++) mesh.setColorAt(n, _c.copy(baseCol[n]).lerp(WHITE, f[nodes[n].bi]));
+  for (let n = 0; n < N; n++) mesh.setColorAt(n, _c.copy(baseCol[n]).lerp(BGC, f[nodes[n].bi]));
   mesh.instanceColor.needsUpdate = true;
+  for (const gl of glows) {
+    const arr = gl.geometry.attributes.color.array, idx = gl.userData.idx, k0 = gl === glows[0] ? .55 : .32;
+    idx.forEach((n, k) => {
+      const ff = f[nodes[n].bi]; _c.copy(baseCol[n]).multiplyScalar(k0 * (1 - ff) * (1 - ff)).toArray(arr, 3 * k);
+    });
+    gl.geometry.attributes.color.needsUpdate = true;
+  }
   for (let e = 0; e < L; e++) {
     const [a, b, kind, i, j] = links[e];
     if (kind === 'rel') {
       const on = selected >= 0 && (i === selected || j === selected);
-      if (on) _c.set(GROUPS[DS[selected].group].color).lerp(WHITE, .45);
-      else _c.copy(REL).lerp(WHITE, selected >= 0 ? .7 : hovered >= 0 && i !== hovered && j !== hovered ? .5 : 0);
+      if (on) _c.set(GROUPS[DS[selected].group].color).lerp(BGC, .45);
+      else _c.copy(REL).lerp(BGC, selected >= 0 ? .7 : hovered >= 0 && i !== hovered && j !== hovered ? .5 : 0);
     } else {
-      _c.copy(EDGE).lerp(baseCol[brains[nodes[a].bi].core], .18).lerp(WHITE, .9 * f[nodes[a].bi]);
+      _c.copy(EDGE).lerp(baseCol[brains[nodes[a].bi].core], edgeTint).lerp(BGC, .9 * f[nodes[a].bi]);
     }
     _c.toArray(eCol, 6 * e); _c.toArray(eCol, 6 * e + 3);
-    _c.copy(MID).lerp(WHITE, kind === 'rel' ? Math.max(.6, f[nodes[a].bi]) : f[nodes[a].bi]).toArray(mCol, 3 * e);
+    _c.copy(MID).lerp(BGC, kind === 'rel' ? Math.max(.6, f[nodes[a].bi]) : f[nodes[a].bi]).toArray(mCol, 3 * e);
   }
   eGeo.attributes.color.needsUpdate = true; mGeo.attributes.color.needsUpdate = true;
   labelEls.forEach((el, i) => { el.classList.toggle('sel', i === selected); el.classList.toggle('hov', i === hovered && i !== selected); });
 }
+
+// ---------- theme ----------
+let dark = false;
+try { const s = localStorage.getItem('dsmap-theme'); dark = s ? s === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) {}
+function applyTheme() {
+  const bg = dark ? '#090a12' : '#ffffff';
+  document.body.classList.toggle('dark', dark);
+  renderer.setClearColor(bg, 1); scene.fog.color.set(bg); BGC.set(bg);
+  EDGE.set(dark ? '#2b2e45' : '#DCDCE4'); MID.set(dark ? '#5d6fa8' : '#A6BDEE'); REL.set(dark ? '#20223a' : '#E6E6EE');
+  edgeTint = dark ? .32 : .18;
+  stars.visible = dark; glows.forEach((g) => g.visible = dark);
+  const tb = document.getElementById('themeBtn'); if (tb) tb.textContent = dark ? '☀ Light' : '☾ Dark';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
+  paintKey = '';
+  if (dark) step((performance.now() - (window.__t0 || 0)) / 1000);
+}
+function toggleTheme() { dark = !dark; try { localStorage.setItem('dsmap-theme', dark ? 'dark' : 'light'); } catch (e) {} applyTheme(); }
 
 // ---------- controls & camera moves ----------
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -291,7 +355,7 @@ function updateLabels() {
   const placed = [];
   for (const it of items) {
     const el = labelEls[it.i];
-    const fs = Math.max(11, Math.min(19, 4300 / Math.max(it.depth, 1)));
+    const fs = Math.max(11, Math.min(19, 4300 / Math.max(it.depth, 1))) * uiScale();
     const w = DS[it.i].name.length * fs * .58 + 3.2 * fs, h = 1.6 * fs;
     const x = it.x + it.rpx + 5, y = it.y - h / 2;
     const off = it.depth < 8 || x > W + 20 || x + w < -20 || y < -40 || y > H + 40;
@@ -307,7 +371,8 @@ function updateLabels() {
     if (selected < 0) { el.style.visibility = 'hidden'; return; }
     const p = project(brains[selected].branchIdx[a]);
     if (p.depth < 8) { el.style.visibility = 'hidden'; return; }
-    const rpx = 3.6 * F / p.depth, w = BRANCHES[a].name.length * 7.6 + 12, h = 18;
+    const us = uiScale(), rpx = 3.6 * F / p.depth, w = (BRANCHES[a].name.length * 7.6 + 12) * us, h = 18 * us;
+    el.style.fontSize = (11 * us).toFixed(1) + 'px';
     let x = p.x + rpx + 4, y = p.y - 9;
     const hit = () => placed.some((r) => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
     for (let k = 0; k < 6 && hit(); k++) y += (k % 2 ? -1 : 1) * (k + 1) * 10;
@@ -458,6 +523,8 @@ addEventListener('keydown', (e) => {
   if (e.target.closest && e.target.closest('input, textarea')) return;
   if (e.key === '/') { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === ' ') { e.preventDefault(); auto.active ? toggleAuto() : startAuto(); return; }
+  if (e.key === 'd' && !e.metaKey && !e.ctrlKey) { toggleTheme(); return; }
+  if (e.key === 'f' && !e.metaKey && !e.ctrlKey) { toggleFullscreen(); return; }
   if (e.key === 'Escape') { if (auto.active) { stopAuto(); return; } if (listEl.classList.contains('open')) closeList(); else if (selected >= 0) deselect(); }
   if (auto.active && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { autoJump(e.key === 'ArrowRight' ? 1 : -1); return; }
   if (selected >= 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
@@ -601,6 +668,7 @@ function syncPlayer() {
     : '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M3 1.6v8.8a.6.6 0 0 0 .9.52l7.3-4.4a.6.6 0 0 0 0-1.04L3.9 1.08A.6.6 0 0 0 3 1.6z"/></svg>'; ppBtn.title = auto.playing ? 'Pause (space)' : 'Play (space)';
   spdBtn.textContent = auto.speed + '×';
   document.body.classList.toggle('auto-paused', auto.active && !auto.playing);
+  if (!auto.playing) document.body.classList.remove('idle'); else wake();
 }
 function startAuto() {
   const from = selected >= 0 ? STEPS.findIndex((s) => s.bi === selected && s.br < 0) : 0;
@@ -618,7 +686,7 @@ function toggleAuto() {
 }
 function stopAuto() {
   auto.active = false; auto.playing = false; clearFlash(); pulse.until = 0;
-  capEl.classList.remove('show'); document.body.classList.remove('autoplay', 'auto-paused');
+  capEl.classList.remove('show'); document.body.classList.remove('autoplay', 'auto-paused', 'idle');
 }
 function autoJump(dir) {
   const cur = ORDER.indexOf(DS[STEPS[auto.i].bi].id);
@@ -652,11 +720,30 @@ playerEl.addEventListener('click', (e) => {
 document.getElementById('playBtn').addEventListener('click', () => auto.active ? toggleAuto() : startAuto());
 document.getElementById('playHero').addEventListener('click', startAuto);
 
+// ---------- big-screen comforts ----------
+let idleTimer = 0;
+function wake() {
+  document.body.classList.remove('idle'); clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { if (auto.playing) document.body.classList.add('idle'); }, 3000);
+}
+['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach((ev) => addEventListener(ev, wake, { passive: true }));
+async function toggleFullscreen(btn) {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {
+    if (btn) { const t = btn.innerHTML; btn.textContent = 'Not allowed here'; setTimeout(() => { btn.innerHTML = t; }, 1800); }
+  }
+}
+document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+document.querySelectorAll('[data-fs]').forEach((b) => b.addEventListener('click', () => toggleFullscreen(b)));
+applyTheme();
+
 // ---------- loop ----------
 renderProgress(); refreshChecks();
 step(0); overview(0); paint();
 fromHash();
-const t0 = performance.now();
+const t0 = performance.now(); window.__t0 = t0;
 let lastNow = t0;
 function frame(now) {
   const t = (now - t0) / 1000, dt = Math.min(.05, (now - lastNow) / 1000); lastNow = now;

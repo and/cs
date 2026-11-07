@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
 <title>Data Structures, Mapped</title>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -90,6 +91,54 @@
     #caption { bottom:70px; } #caption .t { font-size:21px; } #caption .d { font-size:13px; }
     body.panel-open #player, body.panel-open #caption { left:50%; }
   }
+  /* big screens & idle */
+  .chip.fsb { display:grid; place-items:center; padding:7px 10px; }
+  .topright, .search, .brand, .zoom, #player, .credit, .hint { transition:opacity .7s; }
+  body.idle .topright, body.idle .search, body.idle .brand, body.idle .zoom, body.idle #player, body.idle .credit, body.idle .hint { opacity:0; pointer-events:none; }
+  body.idle, body.idle canvas, body.idle .lbl { cursor:none !important; }
+  @media (min-width: 1800px) {
+    #caption { width:min(820px, calc(100% - 60px)); padding:18px 28px 20px; bottom:100px; }
+    #caption .k { font-size:13px; } #caption .t { font-size:38px; } #caption .d { font-size:19px; }
+    #panel { width:480px; font-size:16px; } body.panel-open #player, body.panel-open #caption { left:calc((100% - 508px) / 2); }
+    #panel h2 { font-size:36px; } .one, ul.items, table.ops { font-size:16px !important; }
+  }
+
+  /* dark theme */
+  body.dark { --ink:#ececf4; --mute:#8d8fa6; --line:#24273a; --bg:#090a12; color-scheme:dark; }
+  body.dark .hero p, body.dark .one, body.dark #caption .d { color:#c3c5d6; }
+  body.dark .legend { color:#a9abc0; }
+  body.dark .lbl { background:rgba(12,13,24,.72); color:#e6e7f2; }
+  body.dark .lbl.sel { background:#ececf4; color:#090a12; }
+  body.dark .lbl.hov { background:#1a1c2c; box-shadow:0 0 0 1px #34374f; }
+  body.dark .blbl { background:rgba(12,13,24,.8); }
+  body.dark .chip, body.dark .btn, body.dark .zoom button, body.dark .chips button, body.dark .nav button, body.dark .learned, body.dark .card { background:rgba(18,20,32,.9); color:#e6e7f2; }
+  body.dark .btn.dark { background:#ececf4; color:#090a12; }
+  body.dark #panel { background:#10111c; box-shadow:0 12px 50px rgba(0,0,0,.5); }
+  body.dark .x { background:#1d1f2e; color:#e6e7f2; }
+  body.dark .pill { background:color-mix(in srgb, var(--c) 18%, #10111c); }
+  body.dark table.ops td, body.dark ul.items li { border-bottom-color:#1c1e2d; }
+  body.dark ul.items li.flash, body.dark table.ops tr.flash td { background:rgba(255,205,80,.13); }
+  body.dark ul.items a { border-bottom-color:#4a4d66; }
+  body.dark .cx.g { background:#103525; color:#7fe0ae; } body.dark .cx.t { background:#0f2f3e; color:#7fcbea; }
+  body.dark .cx.m { background:#3a2a0e; color:#f2c27a; } body.dark .cx.b { background:#3d1418; color:#f4979f; }
+  body.dark .learned.on { background:#103525; border-color:#1f5a3e; color:#7fe0ae; }
+  body.dark .code { background:#05060c; border:1px solid #1c1e2d; }
+  body.dark #list { background:rgba(9,10,18,.97); }
+  body.dark .card p { color:#a9abc0; }
+  body.dark #tip { background:#1a1c2c; color:#ececf4; box-shadow:0 0 0 1px #2c2f45; }
+  body.dark #caption { background:rgba(14,15,26,.82); box-shadow:0 8px 40px rgba(0,0,0,.45); }
+  body.dark #player { background:#171927; color:#ececf4; box-shadow:0 10px 40px rgba(0,0,0,.5), 0 0 0 1px #2a2d42; }
+  body.dark #player button { color:#ececf4; }
+  body.dark #player .pp { background:#ececf4; color:#090a12; }
+  body.dark .search input { background-color:rgba(16,17,28,.92); color:#ececf4; box-shadow:0 2px 16px rgba(0,0,0,.4); }
+  body.dark .search input:focus { border-color:#3a3d58; }
+  body.dark #sugg { background:#10111c; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+  body.dark .sg.act { background:#1b1d2d; }
+  body.dark .sg mark { background:#5a4a12; }
+  body.dark .credit a { color:#b4b6cb; border-bottom-color:#3a3d58; }
+  body.dark .hint, body.dark .credit { color:#6d6f86; }
+  body.dark #fallback { background:#090a12; }
+  body.dark .hero h1 { text-shadow:0 0 40px rgba(120,140,255,.18); }
   /* search */
   .search { position:fixed; top:14px; left:50%; transform:translateX(-50%); width:min(380px, calc(100vw - 420px)); z-index:12; }
   .search input { width:100%; font:inherit; font-size:14px; padding:10px 14px 10px 36px; border:1px solid var(--line); border-radius:999px;
@@ -110,7 +159,7 @@
   .sg .s { font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); margin-top:2px; }
   .sg mark { background:#fff1b8; color:inherit; border-radius:3px; padding:0 1px; }
   .sg-empty { padding:12px; font-size:13px; color:var(--mute); }
-  @media (max-width: 1000px) { .search { left:auto; right:22px; transform:none; top:62px; width:min(340px, calc(100vw - 44px)); } }
+  @media (max-width: 1500px) { .search { left:auto; right:22px; transform:none; top:62px; width:min(340px, calc(100vw - 44px)); } }
   @media (max-width: 760px) { .search { left:22px; right:22px; width:auto; } }
 
   /* panel */
@@ -203,6 +252,8 @@ window.addEventListener('error', function (e) {
 </div>
 <div class="topright">
   <div class="chip" id="progress"><b>0</b> / 19 understood</div>
+  <button class="chip" id="themeBtn" title="Toggle dark mode (D)">☾ Dark</button>
+  <button class="chip fsb" data-fs title="Fullscreen (F)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9"/></svg></button>
   <button class="chip" id="playBtn">▶ Play tour</button>
   <button class="chip" id="listBtn">☰ List view</button>
 </div>
@@ -230,6 +281,7 @@ window.addEventListener('error', function (e) {
   <button data-p="next" title="Next structure (→)"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="9.2" y="1.5" width="1.8" height="9" rx=".5"/><path d="M1 1.8v8.4a.5.5 0 0 0 .78.42L7.8 6.42a.5.5 0 0 0 0-.84L1.78 1.38A.5.5 0 0 0 1 1.8z"/></svg></button>
   <div class="pinfo"><div class="pt"></div><div class="pbar"><i></i></div></div>
   <button data-p="speed" class="spd" title="Speed">1×</button>
+  <button data-fs title="Fullscreen (F)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9"/></svg></button>
   <button data-p="stop" title="Stop tour (Esc)">✕</button>
 </div>
 <aside id="panel" aria-live="polite"></aside>
