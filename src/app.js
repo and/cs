@@ -414,7 +414,7 @@ cv.addEventListener('pointerup', (e) => {
   if (!tap) return;
   const n = pick(e.clientX, e.clientY);
   if (n >= 0) select(nodes[n].bi, nodes[n].kind === 'core' ? null : nodes[n]);
-  else if (selected >= 0) deselect();
+  else if (selected >= 0 && !auto.active) deselect();   // during a tour, empty-space clicks keep the tour framing
 });
 cv.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse' || e.buttons) return;
@@ -455,7 +455,7 @@ panel.addEventListener('click', async (e) => {
   const go = e.target.closest('[data-go]'); if (go) { select(byId[go.dataset.go]); return; }
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const act = btn.dataset.act, d = DS[selected];
-  if (act === 'close') deselect();
+  if (act === 'close') { if (auto.active) setTourPanel(false); else deselect(); }
   else if (act === 'learn') { done.has(d.id) ? done.delete(d.id) : done.add(d.id); saveDone(); renderProgress(); refreshChecks(); renderPanel(selected); }
   else if ((act === 'next' || act === 'prev') && auto.active) autoJump(act === 'next' ? 1 : -1);
   else if (act === 'next' || act === 'prev') {
