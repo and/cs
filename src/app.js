@@ -478,6 +478,7 @@ function select(bi, node = null, opts = {}) {
   closeList();
   if (changed) { renderPanel(bi); focusCam(bi, opts.flyMs || 1200, !!opts.noPanel); }
   if (!opts.noPanel) { panel.classList.add('open'); document.body.classList.add('panel-open'); }
+  else if (opts.auto) { panel.classList.remove('open'); document.body.classList.remove('panel-open'); }
   if (location.hash.slice(1) !== DS[bi].id) location.hash = DS[bi].id;
   if (node && node.kind !== 'core') {
     const key = BRANCHES[node.branch].key;
@@ -524,6 +525,8 @@ addEventListener('keydown', (e) => {
   if (e.key === '/') { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === ' ') { e.preventDefault(); auto.active ? toggleAuto() : startAuto(); return; }
   if (e.key === 'd' && !e.metaKey && !e.ctrlKey) { toggleTheme(); return; }
+  if (auto.active && e.key === 'p') { setTourPanel(!auto.showPanel); return; }
+  if (auto.active && e.key === 'c') { setTourCaps(!auto.showCaps); return; }
   if (e.key === 'f' && !e.metaKey && !e.ctrlKey) { toggleFullscreen(); return; }
   if (e.key === 'Escape') { if (auto.active) { stopAuto(); return; } if (listEl.classList.contains('open')) closeList(); else if (selected >= 0) deselect(); }
   if (auto.active && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { autoJump(e.key === 'ArrowRight' ? 1 : -1); return; }
@@ -624,7 +627,9 @@ ORDER.forEach((id) => {
   BRANCHES.forEach((B, a) => STEPS.push({ bi, br: a, dur: 3000 + 300 * Math.min(DS[bi][B.key].length, 6) }));
 });
 const SPEEDS = [.5, 1, 1.5, 2];
-const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0 };
+const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true };
+try { auto.showPanel = localStorage.getItem('dsmap-tour-panel') !== 'off'; auto.showCaps = localStorage.getItem('dsmap-tour-caps') !== 'off'; } catch (e) {}
+const tourPanel = () => isWide() && auto.showPanel;
 const capEl = document.getElementById('caption'), playerEl = document.getElementById('player');
 const ppBtn = playerEl.querySelector('[data-p="toggle"]'), spdBtn = playerEl.querySelector('[data-p="speed"]');
 const pTitle = playerEl.querySelector('.pt'), pFill = playerEl.querySelector('.pbar i');
@@ -643,7 +648,7 @@ function runStep() {
   pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
   clearFlash();
   if (s.br < 0) {
-    select(s.bi, null, { auto: true, flyMs: 3400 / auto.speed, noPanel: !wide });
+    select(s.bi, null, { auto: true, flyMs: 3400 / auto.speed, noPanel: !tourPanel() });
     if (wide) panel.scrollTo({ top: 0, behavior: 'smooth' });
     pulse.set = new Set([b.core]); pulse.until = performance.now() + s.dur / auto.speed;
     setCaption(`${String(n).padStart(2, '0')} / ${ORDER.length} · ${GROUPS[d.group].name} · ${LEVELS[d.level]}`, d.name, d.one);
@@ -667,6 +672,10 @@ function syncPlayer() {
     ? '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1.5" width="2.8" height="9" rx=".6"/><rect x="7.2" y="1.5" width="2.8" height="9" rx=".6"/></svg>'
     : '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M3 1.6v8.8a.6.6 0 0 0 .9.52l7.3-4.4a.6.6 0 0 0 0-1.04L3.9 1.08A.6.6 0 0 0 3 1.6z"/></svg>'; ppBtn.title = auto.playing ? 'Pause (space)' : 'Play (space)';
   spdBtn.textContent = auto.speed + '×';
+  const pb = playerEl.querySelector('[data-p="panel"]'), cb = playerEl.querySelector('[data-p="caps"]');
+  pb.classList.toggle('off', !auto.showPanel); pb.title = (auto.showPanel ? 'Hide' : 'Show') + ' side panel (P)';
+  cb.classList.toggle('off', !auto.showCaps); cb.title = (auto.showCaps ? 'Hide' : 'Show') + ' captions (C)';
+  document.body.classList.toggle('no-caps', !auto.showCaps);
   document.body.classList.toggle('auto-paused', auto.active && !auto.playing);
   if (!auto.playing) document.body.classList.remove('idle'); else wake();
 }
@@ -682,6 +691,18 @@ function toggleAuto() {
   if (!auto.active) return startAuto();
   auto.playing = !auto.playing;
   if (auto.playing && selected !== STEPS[auto.i].bi) goStep(auto.i);   // user wandered off: pick up where we were
+  syncPlayer();
+}
+function setTourPanel(v) {
+  auto.showPanel = v; try { localStorage.setItem('dsmap-tour-panel', v ? 'on' : 'off'); } catch (e) {}
+  syncPlayer();
+  if (!auto.active || selected < 0) return;
+  if (tourPanel()) { panel.classList.add('open'); document.body.classList.add('panel-open'); }
+  else { panel.classList.remove('open'); document.body.classList.remove('panel-open'); clearFlash(); }
+  focusCam(selected, 1400, !tourPanel());          // re-frame: centred when the panel is hidden
+}
+function setTourCaps(v) {
+  auto.showCaps = v; try { localStorage.setItem('dsmap-tour-caps', v ? 'on' : 'off'); } catch (e) {}
   syncPlayer();
 }
 function stopAuto() {
@@ -715,6 +736,8 @@ playerEl.addEventListener('click', (e) => {
   else if (p === 'next') autoJump(1);
   else if (p === 'prev') autoJump(-1);
   else if (p === 'stop') stopAuto();
+  else if (p === 'panel') setTourPanel(!auto.showPanel);
+  else if (p === 'caps') setTourCaps(!auto.showCaps);
   else if (p === 'speed') { auto.speed = SPEEDS[(SPEEDS.indexOf(auto.speed) + 1) % SPEEDS.length]; syncPlayer(); }
 });
 document.getElementById('playBtn').addEventListener('click', () => auto.active ? toggleAuto() : startAuto());

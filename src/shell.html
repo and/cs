@@ -83,6 +83,10 @@
   .pt { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.85; }
   .pbar { height:3px; background:rgba(255,255,255,.2); border-radius:3px; margin-top:6px; overflow:hidden; }
   .pbar i { display:block; height:100%; width:0; background:#fff; border-radius:3px; }
+  #player .tg { position:relative; }
+  #player .tg.off { opacity:.45; }
+  #player .tg.off::after { content:''; position:absolute; left:8px; right:8px; top:50%; height:1.5px; background:currentColor; transform:rotate(-35deg); }
+  body.no-caps #caption { display:none; }
   body.autoplay .credit, body.autoplay .hint { opacity:0; pointer-events:none; }
   body.panel-open #player, body.panel-open #caption { left:calc((100% - 448px) / 2); }
   body.auto-paused #caption { opacity:.55; }
@@ -280,6 +284,8 @@ window.addEventListener('error', function (e) {
   <button data-p="toggle" class="pp" title="Pause (space)"></button>
   <button data-p="next" title="Next structure (→)"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="9.2" y="1.5" width="1.8" height="9" rx=".5"/><path d="M1 1.8v8.4a.5.5 0 0 0 .78.42L7.8 6.42a.5.5 0 0 0 0-.84L1.78 1.38A.5.5 0 0 0 1 1.8z"/></svg></button>
   <div class="pinfo"><div class="pt"></div><div class="pbar"><i></i></div></div>
+  <button data-p="caps" class="tg" title="Hide captions (C)"><svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="10" rx="2"/><path d="M7 5.6a1.9 1.9 0 1 0 0 2.8M12 5.6a1.9 1.9 0 1 0 0 2.8" stroke-linecap="round"/></svg></button>
+  <button data-p="panel" class="tg" title="Hide side panel (P)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="10" rx="2"/><path d="M8.5 2v10"/><path d="M10 5h1.5M10 7h1.5" stroke-linecap="round"/></svg></button>
   <button data-p="speed" class="spd" title="Speed">1×</button>
   <button data-fs title="Fullscreen (F)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9"/></svg></button>
   <button data-p="stop" title="Stop tour (Esc)">✕</button>
