@@ -69,6 +69,7 @@ DS.forEach((d, bi) => {
   const core = nodes.length;
   nodes.push({ bi, kind: 'core', color: GROUPS[d.group].color, r: 6.8, local: [0, 0, 0] });
   const branchIdx = [];
+  const leafIdx = BRANCHES.map(() => []);
   BRANCHES.forEach((B, a) => {
     const yv = 1 - 2 * (a + .5) / BRANCHES.length, rr = Math.sqrt(1 - yv * yv), th = Math.PI * (3 - Math.sqrt(5)) * a;
     const dir = norm([Math.cos(th) * rr + (r() - .5) * .45, yv + (r() - .5) * .45, Math.sin(th) * rr + (r() - .5) * .45]);
@@ -82,6 +83,7 @@ DS.forEach((d, bi) => {
       const ld = norm([dir[0] + (r() - .5) * 1.5, dir[1] + (r() - .5) * 1.5, dir[2] + (r() - .5) * 1.5]);
       const ls = RAD * (.45 + .5 * r());
       const l = nodes.length;
+      leafIdx[a].push(l);
       nodes.push({ bi, kind: 'leaf', branch: a, item: j, color: B.leaf, r: 2.2,
         text: Array.isArray(it) ? `${it[0]}: ${it[1]}` : it,
         local: warp([bp[0] + ld[0] * ls, bp[1] + ld[1] * ls, bp[2] + ld[2] * ls]) });
@@ -89,7 +91,7 @@ DS.forEach((d, bi) => {
     });
   });
   const rm = rng(d.id + '-drift');
-  brains.push({ core, first, count: nodes.length - first, branchIdx,
+  brains.push({ core, first, count: nodes.length - first, branchIdx, leafIdx,
     m: { amp: new THREE.Vector3(9 + 9 * rm(), 7 + 8 * rm(), 8 + 9 * rm()), freq: new THREE.Vector3(.09 + .07 * rm(), .08 + .07 * rm(), .07 + .06 * rm()),
       phase: new THREE.Vector3(6.3 * rm(), 6.3 * rm(), 6.3 * rm()), axis: new THREE.Vector3(rm() - .5, rm() - .5, rm() - .5).normalize(),
       wob: .16 + .14 * rm(), wobF: .05 + .05 * rm(), spin: (rm() - .5) * .05 } });
@@ -209,7 +211,8 @@ const centerOf = (bi, out) => out.copy(CENTERS[bi]).add(drift[bi]);
 const BGC = new THREE.Color(0xffffff), EDGE = new THREE.Color('#DCDCE4'), MID = new THREE.Color('#A6BDEE'), REL = new THREE.Color('#E6E6EE');
 let edgeTint = .18;
 const _c = new THREE.Color();
-let selected = -1, hovered = -1, paintKey = '', activeCategory = 'all';
+let selected = -1, selectedBranch = -1, selectedLeaf = -1;
+let hovered = -1, paintKey = '', activeCategory = 'all';
 
 function fadeFor(bi) {
   if (activeCategory !== 'all' && DS[bi].group !== activeCategory) {
@@ -371,6 +374,28 @@ function focusCam(bi, ms = 1200, centred = false) {
   const t = centred ? c.clone() : isWide() ? c.clone().addScaledVector(right, .3 * n) : c.clone().addScaledVector(up, -.3 * n);
   flyTo(t.clone().addScaledVector(dir, n), t, ms);
 }
+function focusBranch(bi, br, ms = 850) {
+  const b = brains[bi];
+  const bn = b.branchIdx[br];
+  const pos = new THREE.Vector3(world[3 * bn], world[3 * bn + 1], world[3 * bn + 2]);
+  const camDir = camera.position.clone().sub(controls.target).normalize();
+  const dist = isWide() ? 270 : 360;
+  const { right } = basis(camDir);
+  const target = isWide() ? pos.clone().addScaledVector(right, .22 * dist) : pos.clone();
+  flyTo(target.clone().addScaledVector(camDir, dist), target, ms);
+}
+function focusLeaf(bi, br, lf, ms = 800) {
+  const b = brains[bi];
+  const leaves = b.leafIdx[br] || [];
+  const ln = leaves[lf];
+  if (ln === undefined) return;
+  const pos = new THREE.Vector3(world[3 * ln], world[3 * ln + 1], world[3 * ln + 2]);
+  const camDir = camera.position.clone().sub(controls.target).normalize();
+  const dist = isWide() ? 200 : 280;
+  const { right } = basis(camDir);
+  const target = isWide() ? pos.clone().addScaledVector(right, .18 * dist) : pos.clone();
+  flyTo(target.clone().addScaledVector(camDir, dist), target, ms);
+}
 function overview(ms = 1300) {
   const wide = isWide(), dist = wide ? 1120 : 1650;
   const t = wide ? CLOUD.clone().add(new THREE.Vector3(-220, 0, 0)) : CLOUD.clone().add(new THREE.Vector3(0, -140, 0));
@@ -468,8 +493,9 @@ function showTip(n, x, y) {
   if (nd.kind === 'core') tip.innerHTML = `<small>${esc(GROUPS[d.group].name)} · ${esc(LEVELS[d.level])}</small>${esc(d.name)}`;
   else if (nd.kind === 'branch') tip.innerHTML = `<small>${esc(d.name)}</small>${esc(BRANCHES[nd.branch].name)}`;
   else tip.innerHTML = `<small>${esc(d.name)} · ${esc(BRANCHES[nd.branch].name)}</small>${esc(nd.text)}`;
-  const tx = Math.min(x + 14, innerWidth - 300);
-  tip.style.transform = `translate(${tx}px,${y + 14}px)`; tip.style.opacity = 1;
+  const tx = Math.min(Math.max(16, x + 14), innerWidth - 320);
+  const ty = Math.min(Math.max(16, y + 14), innerHeight - 90);
+  tip.style.transform = `translate(${tx}px,${ty}px)`; tip.style.opacity = 1;
 }
 const cv = renderer.domElement;
 cv.style.cursor = 'grab';
@@ -548,15 +574,172 @@ panel.addEventListener('click', async (e) => {
     }
     renderPanel(selected);
   }
-  else if ((act === 'next' || act === 'prev') && auto.active) autoJump(act === 'next' ? 1 : -1);
   else if (act === 'next' || act === 'prev') {
-    const i = ORDER.indexOf(d.id), j = (i + (act === 'next' ? 1 : -1) + ORDER.length) % ORDER.length; select(byId[ORDER[j]]);
+    if (act === 'next') navigateNext();
+    else navigatePrev();
   } else if (act === 'copy') {
     try { await navigator.clipboard.writeText(d.py); btn.textContent = 'Copied'; }
     catch (err) { btn.textContent = 'Select to copy'; }
     setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
   }
 });
+
+// ---------- hierarchical layer navigation ----------
+function highlightCurrentNode(fly = true) {
+  if (selected < 0) return;
+  const b = brains[selected];
+  if (selectedBranch < 0) {
+    // Level 1: Topic Core
+    pulse.set = new Set([b.core]);
+    pulse.until = performance.now() + 2000;
+    tip.style.opacity = 0;
+    if (fly) focusCam(selected, 900);
+    if (panel.classList.contains('open')) {
+      panel.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  } else if (selectedLeaf < 0) {
+    // Level 2: Branch
+    const bn = b.branchIdx[selectedBranch];
+    const leaves = b.leafIdx[selectedBranch] || [];
+    pulse.set = new Set([bn, ...leaves]);
+    pulse.until = performance.now() + 2500;
+    if (fly) focusBranch(selected, selectedBranch, 800);
+    const B = BRANCHES[selectedBranch];
+    if (panel.classList.contains('open')) {
+      const h = panel.querySelector(`[data-sec="${B.key}"]`);
+      if (h) {
+        panel.scrollTo({ top: Math.max(0, h.offsetTop - 18), behavior: 'smooth' });
+        h.classList.add('flash');
+        setTimeout(() => h.classList.remove('flash'), 1600);
+      }
+    }
+    const p = project(bn);
+    showTip(bn, p.x, p.y);
+  } else {
+    // Level 3: Leaf
+    const leaves = b.leafIdx[selectedBranch] || [];
+    const ln = leaves[selectedLeaf];
+    if (ln !== undefined) {
+      pulse.set = new Set([ln]);
+      pulse.until = performance.now() + 2500;
+      if (fly) focusLeaf(selected, selectedBranch, selectedLeaf, 800);
+      const B = BRANCHES[selectedBranch];
+      if (panel.classList.contains('open')) {
+        const itemEl = panel.querySelector(`[data-item="${B.key}-${selectedLeaf}"]`);
+        if (itemEl) {
+          itemEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          itemEl.classList.add('flash');
+          setTimeout(() => itemEl.classList.remove('flash'), 1600);
+        }
+      }
+      const p = project(ln);
+      showTip(ln, p.x, p.y);
+    }
+  }
+}
+
+function navigateUp() {
+  if (auto.active) pauseAuto();
+  if (selected < 0) return;
+  if (selectedLeaf >= 0) {
+    // Level 3 -> Level 2
+    selectedLeaf = -1;
+    highlightCurrentNode(true);
+  } else if (selectedBranch >= 0) {
+    // Level 2 -> Level 1
+    selectedBranch = -1;
+    highlightCurrentNode(true);
+  } else {
+    // Level 1 -> Level 0
+    deselect();
+    overview(1100);
+  }
+}
+
+function navigateDown() {
+  if (auto.active) pauseAuto();
+  if (selected < 0) {
+    // Level 0 -> Level 1
+    const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
+    const firstId = matching[0] || ORDER[0];
+    select(byId[firstId]);
+    return;
+  }
+  if (selectedBranch < 0) {
+    // Level 1 -> Level 2 (First Branch)
+    selectedBranch = 0;
+    selectedLeaf = -1;
+    highlightCurrentNode(true);
+  } else if (selectedLeaf < 0) {
+    // Level 2 -> Level 3 (First Leaf)
+    const leaves = brains[selected].leafIdx[selectedBranch];
+    if (leaves && leaves.length > 0) {
+      selectedLeaf = 0;
+      highlightCurrentNode(true);
+    }
+  } else {
+    // Bottom reached: pulse to indicate
+    const leaves = brains[selected].leafIdx[selectedBranch];
+    if (leaves && leaves[selectedLeaf] !== undefined) {
+      pulse.set = new Set([leaves[selectedLeaf]]);
+      pulse.until = performance.now() + 1500;
+    }
+  }
+}
+
+function navigateNext() {
+  if (auto.active) { autoJump(1); return; }
+  if (selected < 0) {
+    const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
+    select(byId[matching[0] || ORDER[0]]);
+    return;
+  }
+  if (selectedBranch < 0) {
+    // Next topic in matching category
+    const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
+    const curIdx = matching.indexOf(DS[selected].id);
+    const nextIdx = (curIdx + 1) % matching.length;
+    select(byId[matching[nextIdx]]);
+  } else if (selectedLeaf < 0) {
+    // Next branch
+    selectedBranch = (selectedBranch + 1) % BRANCHES.length;
+    highlightCurrentNode(true);
+  } else {
+    // Next leaf
+    const leaves = brains[selected].leafIdx[selectedBranch];
+    if (leaves && leaves.length > 0) {
+      selectedLeaf = (selectedLeaf + 1) % leaves.length;
+      highlightCurrentNode(true);
+    }
+  }
+}
+
+function navigatePrev() {
+  if (auto.active) { autoJump(-1); return; }
+  if (selected < 0) {
+    const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
+    select(byId[matching[matching.length - 1] || ORDER[0]]);
+    return;
+  }
+  if (selectedBranch < 0) {
+    // Prev topic in matching category
+    const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
+    const curIdx = matching.indexOf(DS[selected].id);
+    const prevIdx = (curIdx - 1 + matching.length) % matching.length;
+    select(byId[matching[prevIdx]]);
+  } else if (selectedLeaf < 0) {
+    // Prev branch
+    selectedBranch = (selectedBranch - 1 + BRANCHES.length) % BRANCHES.length;
+    highlightCurrentNode(true);
+  } else {
+    // Prev leaf
+    const leaves = brains[selected].leafIdx[selectedBranch];
+    if (leaves && leaves.length > 0) {
+      selectedLeaf = (selectedLeaf - 1 + leaves.length) % leaves.length;
+      highlightCurrentNode(true);
+    }
+  }
+}
 
 // ---------- selection ----------
 let follow = -1; const followLast = new THREE.Vector3();
@@ -565,6 +748,16 @@ function select(bi, node = null, opts = {}) {
   if (!opts.auto && auto.active) pauseAuto();
   const changed = bi !== selected;
   selected = bi; follow = bi; centerOf(bi, followLast);
+  if (!node || node.kind === 'core') {
+    selectedBranch = -1;
+    selectedLeaf = -1;
+  } else if (node.kind === 'branch') {
+    selectedBranch = node.branch;
+    selectedLeaf = -1;
+  } else if (node.kind === 'leaf') {
+    selectedBranch = node.branch;
+    selectedLeaf = node.item;
+  }
   document.body.classList.add('exploring');
   closeList();
   if (changed) { renderPanel(bi); focusCam(bi, opts.flyMs || 1200, !!opts.noPanel); }
@@ -577,10 +770,27 @@ function select(bi, node = null, opts = {}) {
     if (target) {
       setTimeout(() => { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.add('flash'); setTimeout(() => target.classList.remove('flash'), 1600); }, changed ? 350 : 0);
     }
+    if (node.kind === 'branch') {
+      const bn = brains[bi].branchIdx[node.branch];
+      const p = project(bn);
+      showTip(bn, p.x, p.y);
+    } else {
+      const leaves = brains[bi].leafIdx[node.branch] || [];
+      const ln = leaves[node.item];
+      if (ln !== undefined) {
+        const p = project(ln);
+        showTip(ln, p.x, p.y);
+      }
+    }
+  } else {
+    tip.style.opacity = 0;
   }
 }
+
 function deselect() {
-  selected = -1; follow = -1; panel.classList.remove('open'); document.body.classList.remove('panel-open');
+  selected = -1; selectedBranch = -1; selectedLeaf = -1; follow = -1;
+  panel.classList.remove('open'); document.body.classList.remove('panel-open');
+  tip.style.opacity = 0;
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   if (camera.position.distanceTo(controls.target) < 420) {
     const dir = camera.position.clone().sub(controls.target).normalize();
@@ -639,6 +849,10 @@ document.getElementById('zin').addEventListener('click', () => zoomBy(.6));
 document.getElementById('zout').addEventListener('click', () => zoomBy(1.6));
 addEventListener('keydown', (e) => {
   if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (listEl.classList.contains('open')) {
+    if (e.key === 'Escape') { closeList(); return; }
+    return;
+  }
   if (e.key === '/') { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === ' ') { e.preventDefault(); auto.active ? toggleAuto() : startAuto(); return; }
   if (e.key === 'd' && !e.metaKey && !e.ctrlKey) { toggleTheme(); return; }
@@ -646,11 +860,12 @@ addEventListener('keydown', (e) => {
   if (auto.active && e.key === 'p') { setTourPanel(!auto.showPanel); return; }
   if (auto.active && e.key === 'c') { setTourCaps(!auto.showCaps); return; }
   if (e.key === 'f' && !e.metaKey && !e.ctrlKey) { toggleFullscreen(); return; }
-  if (e.key === 'Escape') { if (auto.active) { stopAuto(); return; } if (listEl.classList.contains('open')) closeList(); else if (selected >= 0) deselect(); }
-  if (auto.active && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { autoJump(e.key === 'ArrowRight' ? 1 : -1); return; }
-  if (selected >= 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
-    const i = ORDER.indexOf(DS[selected].id), j = (i + (e.key === 'ArrowRight' ? 1 : -1) + ORDER.length) % ORDER.length; select(byId[ORDER[j]]);
-  }
+  if (e.key === 'Escape') { if (auto.active) { stopAuto(); return; } if (selected >= 0) deselect(); return; }
+
+  if (e.key === 'ArrowUp') { e.preventDefault(); navigateUp(); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); navigateDown(); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); navigateNext(); return; }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); navigatePrev(); return; }
 });
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
