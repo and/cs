@@ -1101,8 +1101,44 @@ function deselect() {
 }
 function goHome() { deselect(); activeCategory = 'all'; updateCategoryUI(); document.body.classList.remove('exploring'); overview(); }
 
-// ---------- list view ----------
+// ---------- view management & tree view ----------
 const listEl = document.getElementById('list'), listBtn = document.getElementById('listBtn');
+const treeEl = document.getElementById('tree');
+let currentView = '3d'; // '3d' | 'list' | 'tree'
+let activeTreeCategory = 'all';
+
+function setView(mode) {
+  currentView = mode;
+  document.querySelectorAll('.view-tab').forEach((tab) => {
+    const isAct = tab.dataset.view === mode;
+    tab.classList.toggle('act', isAct);
+    tab.setAttribute('aria-selected', String(isAct));
+  });
+
+  if (mode === '3d') {
+    listEl.classList.remove('open');
+    if (treeEl) treeEl.classList.remove('open');
+    tip.style.opacity = 0;
+  } else if (mode === 'list') {
+    renderList();
+    listEl.classList.add('open');
+    if (treeEl) treeEl.classList.remove('open');
+    tip.style.opacity = 0;
+  } else if (mode === 'tree') {
+    renderTree();
+    if (treeEl) treeEl.classList.add('open');
+    listEl.classList.remove('open');
+    tip.style.opacity = 0;
+    setTimeout(() => {
+      const firstRow = treeEl?.querySelector('.tree-row');
+      if (firstRow) focusTreeRow(firstRow);
+    }, 60);
+  }
+}
+
+function openList() { setView('list'); }
+function closeList() { setView('3d'); }
+
 function renderList() {
   const groupsToRender = activeCategory === 'all'
     ? Object.entries(GROUPS)
@@ -1123,14 +1159,433 @@ function renderList() {
       <span class="n">${String(ORDER.indexOf(d.id) + 1).padStart(2, '0')} · ${esc(LEVELS[d.level])}</span><b>${esc(d.name)}</b><p>${esc(d.one)}</p></button>`).join('')}
     </div></div>`).join('');
 }
-function openList() { renderList(); listEl.classList.add('open'); listBtn.textContent = '◎ 3D view'; tip.style.opacity = 0; }
-function closeList() { listEl.classList.remove('open'); listBtn.textContent = '☰ List view'; }
-listBtn.addEventListener('click', () => listEl.classList.contains('open') ? closeList() : openList());
+
+function renderTree() {
+  if (!treeEl) return;
+  const groupsToRender = activeTreeCategory === 'all'
+    ? Object.entries(GROUPS)
+    : Object.entries(GROUPS).filter(([k]) => k === activeTreeCategory);
+
+  let treeHtml = `
+    <div class="tree-shell">
+      <div class="tree-toolbar">
+        <div class="tree-title-group">
+          <h2 class="tree-title">Computer Science Tree</h2>
+          <span class="tree-subtitle">Explore domains, topics, data structures, and algorithms</span>
+        </div>
+        <div class="tree-actions">
+          <button class="tree-btn" id="treeExpandAll" title="Expand All (E)">⊞ Expand all</button>
+          <button class="tree-btn" id="treeCollapseAll" title="Collapse All (C)">⊟ Collapse all</button>
+          <button class="tree-btn" id="treeCloseBtn" title="Back to 3D View (Esc)">✕ Close (Esc)</button>
+        </div>
+      </div>
+
+      <div class="tree-search-bar">
+        <input type="text" class="tree-search-input" id="treeSearch" placeholder="Filter tree topics, algorithms, concepts... (/)" />
+        <div class="tree-hints">
+          <span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span>
+          <span><kbd>→</kbd> expand</span>
+          <span><kbd>←</kbd> collapse</span>
+          <span><kbd>Enter</kbd> open</span>
+          <span><kbd>E</kbd> / <kbd>C</kbd> expand / collapse all</span>
+          <span><kbd>T</kbd> toggle view</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;">
+        <span style="font-size:11.5px; font-weight:700; text-transform:uppercase; color:var(--mute); letter-spacing:.06em; margin-right:4px; align-self:center;">Domain:</span>
+        <button class="cat-pill${activeTreeCategory === 'all' ? ' act' : ''}" data-tree-cat="all">All</button>
+        ${Object.entries(GROUPS).map(([k, g]) => `
+          <button class="cat-pill${activeTreeCategory === k ? ' act' : ''}" data-tree-cat="${k}"><i style="background:${g.color}"></i>${esc(g.name)}</button>
+        `).join('')}
+      </div>
+
+      <ul class="tree-root" role="tree" id="treeRoot">
+  `;
+
+  groupsToRender.forEach(([gk, g]) => {
+    const groupTopics = DS.filter((d) => d.group === gk).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+
+    treeHtml += `
+      <li class="tree-item level-0" role="treeitem" aria-expanded="true">
+        <div class="tree-row" tabindex="-1">
+          <button class="tree-toggle" aria-label="Toggle domain">▼</button>
+          <span class="tree-dot" style="background:${g.color}"></span>
+          <span class="tree-label">${esc(g.name)}</span>
+          <div class="tree-meta">
+            <span class="tree-pill">${groupTopics.length} fields</span>
+          </div>
+        </div>
+        <ul class="tree-children" role="group">
+    `;
+
+    groupTopics.forEach((d) => {
+      const bi = byId[d.id];
+      const isDsa = bi === 0;
+      const curBranches = isDsa && d.dsaBranches ? d.dsaBranches : BRANCHES;
+
+      treeHtml += `
+        <li class="tree-item level-1" role="treeitem" aria-expanded="true">
+          <div class="tree-row" tabindex="-1" data-bi="${bi}">
+            <button class="tree-toggle" aria-label="Toggle topic">▼</button>
+            <span class="tree-dot" style="background:${g.color}"></span>
+            <span class="tree-label">${esc(d.name)}</span>
+            <div class="tree-meta">
+              <span class="tree-pill">${esc(LEVELS[d.level])}</span>
+              ${done.has(d.id) ? '<span class="tree-done-ck">✓ Understood</span>' : ''}
+            </div>
+          </div>
+          <ul class="tree-children" role="group">
+      `;
+
+      if (isDsa) {
+        // DSA: Render 6 category branches with all 24 data structures and algorithms
+        curBranches.forEach((bObj) => {
+          const subTopics = (bObj.ids || []).map((id) => DSA_TOPICS.find((t) => t.id === id)).filter(Boolean);
+
+          treeHtml += `
+            <li class="tree-item level-2 collapsed" role="treeitem" aria-expanded="false">
+              <div class="tree-row" tabindex="-1">
+                <button class="tree-toggle" aria-label="Toggle branch">▼</button>
+                <span class="tree-dot" style="background:${bObj.color}"></span>
+                <span class="tree-label">${esc(bObj.name)}</span>
+                <div class="tree-meta">
+                  <span class="tree-pill">${subTopics.length} topics</span>
+                </div>
+              </div>
+              <ul class="tree-children" role="group">
+          `;
+
+          subTopics.forEach((sub) => {
+            const topOp = sub.ops && sub.ops[0] ? `${sub.ops[0][0]}: ${sub.ops[0][1]}` : '';
+            treeHtml += `
+              <li class="tree-item level-3 leaf" role="treeitem">
+                <div class="tree-row" tabindex="-1" data-dsa-sub="${sub.id}" data-bi="0">
+                  <span class="tree-toggle"></span>
+                  <span class="tree-dot" style="background:${DSA_GROUPS[sub.group].color}"></span>
+                  <span class="tree-label"><b>${esc(sub.name)}</b> <span style="opacity:0.65; font-size:12px; margin-left:6px;">${esc(sub.one.slice(0, 55))}…</span></span>
+                  <div class="tree-meta">
+                    ${topOp ? `<span class="tree-pill cost">${esc(topOp)}</span>` : ''}
+                    <span class="tree-pill">${esc(DSA_LEVELS[sub.level])}</span>
+                    ${done.has(sub.id) ? '<span class="tree-done-ck">✓</span>' : ''}
+                  </div>
+                </div>
+              </li>
+            `;
+          });
+
+          treeHtml += `</ul></li>`;
+        });
+      } else {
+        // Other 11 topics: Render standard branches (Core Concepts, Patterns, Real-World Systems, Pitfalls)
+        const sections = [
+          { key: 'core', name: 'Core Concepts', color: '#5B8DEF', items: (d.core || []).map((x) => Array.isArray(x) ? `${x[0]}: ${x[1]}` : x) },
+          { key: 'why', name: 'Why It Matters', color: '#34A77A', items: d.why || [] },
+          { key: 'patterns', name: 'Core Patterns', color: '#9A6BE0', items: d.patterns || [] },
+          { key: 'examples', name: 'Real-World Systems', color: '#EE8A3C', items: d.examples || [] },
+          { key: 'pitfalls', name: 'Common Pitfalls', color: '#E05561', items: d.pitfalls || [] },
+        ];
+
+        sections.forEach((sec) => {
+          treeHtml += `
+            <li class="tree-item level-2 collapsed" role="treeitem" aria-expanded="false">
+              <div class="tree-row" tabindex="-1">
+                <button class="tree-toggle" aria-label="Toggle section">▼</button>
+                <span class="tree-dot" style="background:${sec.color}"></span>
+                <span class="tree-label">${esc(sec.name)}</span>
+                <div class="tree-meta">
+                  <span class="tree-pill">${sec.items.length} items</span>
+                </div>
+              </div>
+              <ul class="tree-children" role="group">
+          `;
+
+          sec.items.forEach((it) => {
+            treeHtml += `
+              <li class="tree-item level-3 leaf" role="treeitem">
+                <div class="tree-row" tabindex="-1" data-bi="${bi}">
+                  <span class="tree-toggle"></span>
+                  <span class="tree-dot" style="background:${sec.color}; opacity:0.6;"></span>
+                  <span class="tree-label">${esc(it)}</span>
+                </div>
+              </li>
+            `;
+          });
+
+          treeHtml += `</ul></li>`;
+        });
+      }
+
+      treeHtml += `</ul></li>`;
+    });
+
+    treeHtml += `</ul></li>`;
+  });
+
+  treeHtml += `</ul></div>`;
+  treeEl.innerHTML = treeHtml;
+}
+
+function getVisibleTreeRows() {
+  if (!treeEl || !treeEl.classList.contains('open')) return [];
+  const rows = Array.from(treeEl.querySelectorAll('.tree-row'));
+  return rows.filter((row) => {
+    let item = row.parentElement;
+    if (item.style.display === 'none') return false;
+    let anc = item.parentElement;
+    while (anc && anc.id !== 'treeRoot') {
+      const parentItem = anc.closest('.tree-item');
+      if (parentItem && (parentItem.classList.contains('collapsed') || parentItem.style.display === 'none')) {
+        return false;
+      }
+      anc = parentItem ? parentItem.parentElement : null;
+    }
+    return row.offsetParent !== null;
+  });
+}
+
+function focusTreeRow(row) {
+  if (!row || !treeEl) return;
+  treeEl.querySelectorAll('.tree-row.active').forEach((r) => {
+    r.classList.remove('active');
+    r.tabIndex = -1;
+  });
+  row.classList.add('active');
+  row.tabIndex = 0;
+  row.focus({ preventScroll: true });
+  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function expandAllTree() {
+  if (!treeEl) return;
+  treeEl.querySelectorAll('.tree-item.collapsed').forEach((item) => {
+    item.classList.remove('collapsed');
+    item.setAttribute('aria-expanded', 'true');
+  });
+}
+
+function collapseAllTree() {
+  if (!treeEl) return;
+  treeEl.querySelectorAll('.tree-item.level-2, .tree-item.level-1').forEach((item) => {
+    item.classList.add('collapsed');
+    item.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function filterTree(query) {
+  const q = query.trim().toLowerCase();
+  const treeRoot = document.getElementById('treeRoot');
+  if (!treeRoot) return;
+  const allItems = Array.from(treeRoot.querySelectorAll('.tree-item'));
+  if (!q) {
+    allItems.forEach((it) => { it.style.display = ''; });
+    return;
+  }
+  allItems.forEach((it) => {
+    const text = it.querySelector(':scope > .tree-row')?.textContent?.toLowerCase() || '';
+    const matches = text.includes(q);
+    if (matches) {
+      it.style.display = '';
+      let p = it.parentElement?.closest('.tree-item');
+      while (p) {
+        p.style.display = '';
+        p.classList.remove('collapsed');
+        p.setAttribute('aria-expanded', 'true');
+        p = p.parentElement?.closest('.tree-item');
+      }
+    } else {
+      it.style.display = 'none';
+    }
+  });
+  allItems.forEach((it) => {
+    const visibleChild = it.querySelector('.tree-children > .tree-item:not([style*="display: none"])');
+    if (visibleChild) it.style.display = '';
+  });
+}
+
+function handleTreeKey(e) {
+  const visible = getVisibleTreeRows();
+  if (!visible.length) return;
+  let activeRow = visible.find((r) => r.classList.contains('active')) || visible[0];
+  let idx = visible.indexOf(activeRow);
+  if (idx < 0) idx = 0;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    const nextIdx = Math.min(visible.length - 1, idx + 1);
+    focusTreeRow(visible[nextIdx]);
+    return;
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const prevIdx = Math.max(0, idx - 1);
+    focusTreeRow(visible[prevIdx]);
+    return;
+  }
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    const item = activeRow.parentElement;
+    const hasChildren = item.querySelector('.tree-children');
+    if (hasChildren) {
+      if (item.classList.contains('collapsed')) {
+        item.classList.remove('collapsed');
+        item.setAttribute('aria-expanded', 'true');
+      } else {
+        const firstChildRow = item.querySelector('.tree-children > .tree-item:not([style*="display: none"]) > .tree-row');
+        if (firstChildRow) focusTreeRow(firstChildRow);
+      }
+    }
+    return;
+  }
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const item = activeRow.parentElement;
+    const hasChildren = item.querySelector('.tree-children');
+    if (hasChildren && !item.classList.contains('collapsed')) {
+      item.classList.add('collapsed');
+      item.setAttribute('aria-expanded', 'false');
+    } else {
+      const parentItem = item.parentElement.closest('.tree-item');
+      if (parentItem) {
+        const parentRow = parentItem.querySelector(':scope > .tree-row');
+        if (parentRow) focusTreeRow(parentRow);
+      }
+    }
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    const item = activeRow.parentElement;
+    const dsaSubId = activeRow.dataset.dsaSub;
+    const topicBi = activeRow.dataset.bi;
+
+    if (dsaSubId) {
+      setView('3d');
+      openDsaTopic(dsaSubId, true);
+      return;
+    }
+    if (topicBi !== undefined && !activeRow.dataset.dsaSub && item.classList.contains('level-1')) {
+      setView('3d');
+      select(parseInt(topicBi, 10));
+      return;
+    }
+    if (item.querySelector('.tree-children')) {
+      const isCollapsed = item.classList.toggle('collapsed');
+      item.setAttribute('aria-expanded', String(!isCollapsed));
+    }
+    return;
+  }
+  if (e.key === 'e' || e.key === 'E' || e.key === '*') {
+    e.preventDefault();
+    expandAllTree();
+    return;
+  }
+  if (e.key === 'c' || e.key === 'C') {
+    e.preventDefault();
+    collapseAllTree();
+    return;
+  }
+  if (e.key === 'Home') {
+    e.preventDefault();
+    focusTreeRow(visible[0]);
+    return;
+  }
+  if (e.key === 'End') {
+    e.preventDefault();
+    focusTreeRow(visible[visible.length - 1]);
+    return;
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    setView('3d');
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    const searchInput = document.getElementById('treeSearch');
+    if (searchInput) { searchInput.focus(); searchInput.select(); }
+    return;
+  }
+}
+
+// Event listeners for tree
+if (treeEl) {
+  treeEl.addEventListener('click', (e) => {
+    if (e.target.closest('#treeExpandAll')) { expandAllTree(); return; }
+    if (e.target.closest('#treeCollapseAll')) { collapseAllTree(); return; }
+    if (e.target.closest('#treeCloseBtn')) { setView('3d'); return; }
+
+    const treeCatBtn = e.target.closest('[data-tree-cat]');
+    if (treeCatBtn) {
+      activeTreeCategory = treeCatBtn.dataset.treeCat;
+      renderTree();
+      return;
+    }
+
+    const toggleBtn = e.target.closest('.tree-toggle');
+    if (toggleBtn) {
+      const item = toggleBtn.closest('.tree-item');
+      if (item && item.querySelector('.tree-children')) {
+        const isCollapsed = item.classList.toggle('collapsed');
+        item.setAttribute('aria-expanded', String(!isCollapsed));
+        const row = item.querySelector(':scope > .tree-row');
+        if (row) focusTreeRow(row);
+      }
+      return;
+    }
+
+    const row = e.target.closest('.tree-row');
+    if (row) {
+      focusTreeRow(row);
+      const item = row.parentElement;
+      const dsaSubId = row.dataset.dsaSub;
+      const topicBi = row.dataset.bi;
+
+      if (dsaSubId) {
+        setView('3d');
+        openDsaTopic(dsaSubId, true);
+        return;
+      }
+      if (topicBi !== undefined && !row.dataset.dsaSub && item.classList.contains('level-1')) {
+        setView('3d');
+        select(parseInt(topicBi, 10));
+        return;
+      }
+      if (item.querySelector('.tree-children')) {
+        const isCollapsed = item.classList.toggle('collapsed');
+        item.setAttribute('aria-expanded', String(!isCollapsed));
+      }
+    }
+  });
+
+  treeEl.addEventListener('input', (e) => {
+    if (e.target.id === 'treeSearch') {
+      filterTree(e.target.value);
+    }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const vTab = e.target.closest('.view-tab');
+  if (vTab) {
+    setView(vTab.dataset.view);
+    return;
+  }
+  const lBtn = e.target.closest('#listBtn');
+  if (lBtn) {
+    setView(currentView === 'list' ? '3d' : 'list');
+    return;
+  }
+});
+
 listEl.addEventListener('click', (e) => {
   const catBtn = e.target.closest('.cat-pill');
   if (catBtn) { setCategory(catBtn.dataset.cat, false); return; }
   const c = e.target.closest('[data-go]');
-  if (c) select(byId[c.dataset.go]);
+  if (c) {
+    setView('3d');
+    select(byId[c.dataset.go]);
+  }
 });
 
 // ---------- hero & misc ----------
@@ -1150,11 +1605,32 @@ document.getElementById('brand').addEventListener('click', goHome);
 document.getElementById('zin').addEventListener('click', () => zoomBy(.6));
 document.getElementById('zout').addEventListener('click', () => zoomBy(1.6));
 addEventListener('keydown', (e) => {
-  if (e.target.closest && e.target.closest('input, textarea')) return;
-  if (listEl.classList.contains('open')) {
-    if (e.key === 'Escape') { closeList(); return; }
+  if (treeEl && treeEl.classList.contains('open')) {
+    if (e.target && e.target.id === 'treeSearch') {
+      if (e.key === 'Escape') {
+        e.target.blur();
+        const first = treeEl.querySelector('.tree-row');
+        if (first) focusTreeRow(first);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.target.blur();
+        const first = getVisibleTreeRows()[0];
+        if (first) focusTreeRow(first);
+        return;
+      }
+      return;
+    }
+    handleTreeKey(e);
     return;
   }
+  if (listEl.classList.contains('open')) {
+    if (e.key === 'Escape') { setView('3d'); return; }
+    return;
+  }
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (e.key === 't' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); setView(currentView === 'tree' ? '3d' : 'tree'); return; }
   if (e.key === '/') { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === ' ') { e.preventDefault(); auto.active ? toggleAuto() : startAuto(); return; }
   if (e.key === 'd' && !e.metaKey && !e.ctrlKey) { toggleTheme(); return; }

@@ -297,6 +297,70 @@
   .card p { margin:0; font-size:13px; color:#55555e; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .card .done { color:#2E9E6A; font-weight:700; font-size:13px; float:right; }
 
+  /* view switcher */
+  .view-switch { display:inline-flex; gap:2px; background:rgba(0,0,0,.05); padding:3px; border-radius:999px; border:1px solid var(--line); align-items:center; }
+  .view-tab { padding:5px 11px; font-size:12px; font-weight:650; border-radius:999px; border:none; background:transparent; cursor:pointer; color:var(--mute); transition:all .18s; display:inline-flex; align-items:center; gap:4px; }
+  .view-tab:hover { color:var(--ink); }
+  .view-tab.act { background:#fff; color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  body.dark .view-switch { background:rgba(18,20,32,.92); border-color:#24273a; }
+  body.dark .view-tab.act { background:#1e2133; color:#ececf4; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+
+  /* tree view */
+  #tree { position:fixed; inset:0; background:rgba(255,255,255,.98); overflow-y:auto; padding:78px 24px 60px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:4; }
+  #tree.open { opacity:1; pointer-events:auto; }
+  body.dark #tree { background:rgba(10,11,19,.98); color:#e6e7f2; }
+  .tree-shell { max-width:960px; margin:0 auto; }
+  .tree-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+  .tree-title-group { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .tree-title { font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0; }
+  .tree-subtitle { font-size:12.5px; color:var(--mute); }
+  .tree-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .tree-btn { font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; color:var(--ink); display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+  .tree-btn:hover { border-color:#bfc0cc; background:#f4f4f7; }
+  body.dark .tree-btn { background:#151829; border-color:#24273a; color:#c3c5d6; }
+  body.dark .tree-btn:hover { background:#1e2238; border-color:#383d5a; }
+
+  .tree-search-bar { display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .tree-search-input { flex:1; min-width:240px; max-width:380px; font-size:13px; padding:7px 12px 7px 32px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%239a9aa4' stroke-width='2'%3E%3Ccircle cx='6' cy='6' r='4.5'/%3E%3Cpath d='m9.5 9.5 3 3'/%3E%3C/svg%3E") no-repeat 10px 50%; outline:none; }
+  body.dark .tree-search-input { background-color:#141624; border-color:#24273a; color:#ececf4; }
+  .tree-hints { font-size:11px; color:var(--mute); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tree-hints kbd { font-size:10px; font-weight:700; padding:1.5px 5px; border-radius:4px; border:1px solid var(--line); background:rgba(0,0,0,.04); }
+  body.dark .tree-hints kbd { background:rgba(255,255,255,.08); border-color:#2d3148; }
+
+  .tree-root { list-style:none; margin:0; padding:0; user-select:none; }
+  .tree-item { position:relative; list-style:none; margin:0; padding:0; }
+  .tree-row { display:flex; align-items:center; gap:7px; padding:5.5px 8px; border-radius:7px; cursor:pointer; font-size:13.5px; transition:background .12s, color .12s; position:relative; }
+  .tree-row:hover { background:rgba(0,0,0,.04); }
+  body.dark .tree-row:hover { background:rgba(255,255,255,.05); }
+  .tree-row.active, .tree-row:focus-visible { outline:none; background:rgba(59,111,224,.12); color:#1d4ed8; }
+  body.dark .tree-row.active, body.dark .tree-row:focus-visible { background:rgba(91,141,239,.18); color:#93c5fd; }
+
+  .tree-toggle { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; padding:0; color:var(--mute); transition:transform .2s ease; flex:none; border-radius:4px; font-size:9px; }
+  .tree-toggle:hover { color:var(--ink); background:rgba(0,0,0,.06); }
+  body.dark .tree-toggle:hover { background:rgba(255,255,255,.1); }
+  .tree-item.collapsed > .tree-row .tree-toggle { transform:rotate(-90deg); }
+  .tree-item.leaf > .tree-row .tree-toggle { visibility:hidden; pointer-events:none; }
+
+  .tree-dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  .tree-label { font-weight:550; color:var(--ink); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tree-item.level-0 > .tree-row .tree-label { font-size:13.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink); }
+  .tree-item.level-1 > .tree-row .tree-label { font-size:14px; font-weight:650; }
+  .tree-item.level-2 > .tree-row .tree-label { font-size:13px; font-weight:600; color:#4a4d61; }
+  body.dark .tree-item.level-2 > .tree-row .tree-label { color:#b5b8d0; }
+  .tree-item.level-3 > .tree-row .tree-label { font-size:12.5px; font-weight:500; color:#5c5f73; }
+  body.dark .tree-item.level-3 > .tree-row .tree-label { color:#9ea1b9; }
+
+  .tree-meta { display:inline-flex; align-items:center; gap:6px; font-size:11px; margin-left:auto; }
+  .tree-pill { font-size:10.5px; font-weight:600; padding:2px 7px; border-radius:999px; background:rgba(0,0,0,.05); color:var(--mute); }
+  body.dark .tree-pill { background:rgba(255,255,255,.07); color:#a2a5be; }
+  .tree-pill.cost { font-family:monospace; font-weight:700; color:#2563eb; background:#eff6ff; }
+  body.dark .tree-pill.cost { color:#93c5fd; background:#1e293b; }
+  .tree-done-ck { color:#2E9E6A; font-weight:700; font-size:12px; }
+
+  .tree-children { list-style:none; margin:0; padding:0 0 0 16px; border-left:1px dashed rgba(0,0,0,.12); margin-left:8px; }
+  body.dark .tree-children { border-left-color:rgba(255,255,255,.12); }
+  .tree-item.collapsed > .tree-children { display:none; }
+
   #fallback { position:fixed; inset:0; display:none; overflow:auto; padding:80px 24px 30px; background:#fff; z-index:30; font-size:14px; line-height:1.45; }
   .fbitem { padding:10px 0; border-bottom:1px solid var(--line); }
   #errbar { display:none; position:fixed; left:12px; right:12px; bottom:12px; background:#a32a37; color:#fff; padding:10px 14px; border-radius:10px; font-size:13px; z-index:40; }
@@ -342,7 +406,11 @@ window.addEventListener('error', function (e) {
   <button class="chip" id="themeBtn" title="Toggle dark mode (D)">☾ Dark</button>
   <button class="chip fsb" data-fs title="Fullscreen (F)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9"/></svg></button>
   <button class="chip" id="playBtn">▶ Play tour</button>
-  <button class="chip" id="listBtn">☰ List view</button>
+  <div class="view-switch" role="tablist" aria-label="View Switcher">
+    <button class="view-tab act" id="view3dBtn" data-view="3d" role="tab" aria-selected="true" title="3D Canvas View">◎ 3D</button>
+    <button class="view-tab" id="viewListBtn" data-view="list" role="tab" aria-selected="false" title="Card List View">☰ List</button>
+    <button class="view-tab" id="viewTreeBtn" data-view="tree" role="tab" aria-selected="false" title="Interactive Tree View (T)">🌲 Tree</button>
+  </div>
 </div>
 
 <section class="hero" id="hero">
@@ -376,6 +444,7 @@ window.addEventListener('error', function (e) {
 </div>
 <aside id="panel" aria-live="polite"></aside>
 <div id="list"></div>
+<div id="tree"></div>
 <div id="tip"></div>
 <div id="fallback">This map needs WebGL, which isn't available in this browser. Use the list view instead.</div>
 
