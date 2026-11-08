@@ -1,3 +1,6 @@
+import { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS } from './dsa_data.js';
+export { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS };
+
 export const GROUPS = {
   foundations: { name: 'Foundations',        color: '#3B6FE0' },
   systems:     { name: 'Systems & Hardware', color: '#0D9488' },
@@ -73,6 +76,14 @@ ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True) # O(n log n)
 top_student, top_score = ranked[0]
 print(f"Top student: {top_student} ({top_score})")`,
   related: ['architecture','os','languages-compilers','theory-computation'],
+  topics: DSA_TOPICS,
+  dsaBranches: [
+    { key: 'linear', name: 'Linear Layouts', color: '#3B6FE0', leaf: '#BCD0F8', ids: ['array', 'string', 'linked-list', 'stack', 'queue', 'deque'] },
+    { key: 'hashing', name: 'Hashing & Caches', color: '#E0703B', leaf: '#F9D4B2', ids: ['hash-map', 'hash-set', 'lru-cache'] },
+    { key: 'trees', name: 'Trees & Heaps', color: '#2E9E6A', leaf: '#B7E2CD', ids: ['binary-tree', 'bst', 'balanced-bst', 'heap', 'trie'] },
+    { key: 'graphs', name: 'Graphs & Networks', color: '#8A4FD8', leaf: '#D8C8F4', ids: ['grid', 'graph', 'union-find'] },
+    { key: 'algorithms', name: 'Range & Algorithms', color: '#D97706', leaf: '#FDE68A', ids: ['segment-tree', 'fenwick-tree', 'binary-search', 'divide-and-conquer', 'greedy', 'backtracking', 'dynamic-programming'] }
+  ],
 },
 
 {

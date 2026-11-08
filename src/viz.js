@@ -1,3 +1,5 @@
+import { renderDsaViz } from './dsa_viz.js';
+
 // Visual diagrams for each major Computer Science field rendered in the sidebar.
 // Fully responsive, theme-adaptive pure SVG with clean sans-serif typography.
 
@@ -15,6 +17,8 @@ const defs = `
 </defs>`;
 
 export function renderViz(id) {
+  const dsaSvg = renderDsaViz(id);
+  if (dsaSvg) return dsaSvg;
   switch (id) {
     case 'dsa':
       return `<svg viewBox="0 0 340 110" fill="none" xmlns="http://www.w3.org/2000/svg">

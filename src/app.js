@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DS, GROUPS, BRANCHES, LEVELS, ORDER } from './data.js';
+import { DS, GROUPS, BRANCHES, LEVELS, ORDER, DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS } from './data.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { renderViz } from './viz.js';
 
@@ -23,7 +23,7 @@ const cxClass = (c) => /O\(1\)|α/.test(c) ? 'g' : /log/.test(c) ? 't' : /²/.te
 let done = new Set();
 try { done = new Set(JSON.parse(localStorage.getItem('csmap-done') || localStorage.getItem('dsmap-done') || '[]')); } catch (e) {}
 const saveDone = () => { try { localStorage.setItem('csmap-done', JSON.stringify([...done])); } catch (e) {} };
-function renderProgress() { document.getElementById('progress').innerHTML = `<b>${done.size}</b> / ${DS.length} understood`; }
+function renderProgress() { document.getElementById('progress').innerHTML = `<b>${done.size}</b> / ${DS.length + DSA_TOPICS.length} understood`; }
 
 // ---------- layout: where each topic's cluster sits ----------
 const GROUP_CENTER = {
@@ -69,29 +69,35 @@ DS.forEach((d, bi) => {
   const core = nodes.length;
   nodes.push({ bi, kind: 'core', color: GROUPS[d.group].color, r: 6.8, local: [0, 0, 0] });
   const branchIdx = [];
-  const leafIdx = BRANCHES.map(() => []);
-  BRANCHES.forEach((B, a) => {
-    const yv = 1 - 2 * (a + .5) / BRANCHES.length, rr = Math.sqrt(1 - yv * yv), th = Math.PI * (3 - Math.sqrt(5)) * a;
+  const curBranches = (bi === 0 && d.dsaBranches) ? d.dsaBranches : BRANCHES;
+  const leafIdx = curBranches.map(() => []);
+
+  curBranches.forEach((B, a) => {
+    const yv = 1 - 2 * (a + .5) / curBranches.length, rr = Math.sqrt(1 - yv * yv), th = Math.PI * (3 - Math.sqrt(5)) * a;
     const dir = norm([Math.cos(th) * rr + (r() - .5) * .45, yv + (r() - .5) * .45, Math.sin(th) * rr + (r() - .5) * .45]);
     const dist = RAD * (.8 + .45 * r());
     const bp = [dir[0] * dist, dir[1] * dist, dir[2] * dist];
     const b = nodes.length;
-    nodes.push({ bi, kind: 'branch', branch: a, color: B.color, r: 3.8, local: warp(bp) });
+    nodes.push({ bi, kind: 'branch', branch: a, name: B.name, color: B.color, r: 3.8, local: warp(bp) });
     links.push([core, b, 'in']); branchIdx.push(b);
-    const items = d[B.key].slice(0, 9);
+    const items = B.ids ? B.ids.map((id) => DSA_TOPICS.find((t) => t.id === id)).filter(Boolean) : d[B.key].slice(0, 9);
     items.forEach((it, j) => {
       const ld = norm([dir[0] + (r() - .5) * 1.5, dir[1] + (r() - .5) * 1.5, dir[2] + (r() - .5) * 1.5]);
       const ls = RAD * (.45 + .5 * r());
       const l = nodes.length;
       leafIdx[a].push(l);
-      nodes.push({ bi, kind: 'leaf', branch: a, item: j, color: B.leaf, r: 2.2,
-        text: Array.isArray(it) ? `${it[0]}: ${it[1]}` : it,
-        local: warp([bp[0] + ld[0] * ls, bp[1] + ld[1] * ls, bp[2] + ld[2] * ls]) });
+      const isDsaSub = !!it.id;
+      nodes.push({
+        bi, kind: 'leaf', branch: a, item: j, color: B.leaf, r: isDsaSub ? 2.5 : 2.2,
+        dsaTopicId: isDsaSub ? it.id : null,
+        text: isDsaSub ? `${it.name}: ${it.one.slice(0, 65)}…` : (Array.isArray(it) ? `${it[0]}: ${it[1]}` : it),
+        local: warp([bp[0] + ld[0] * ls, bp[1] + ld[1] * ls, bp[2] + ld[2] * ls])
+      });
       links.push([b, l, 'in']);
     });
   });
   const rm = rng(d.id + '-drift');
-  brains.push({ core, first, count: nodes.length - first, branchIdx, leafIdx,
+  brains.push({ core, first, count: nodes.length - first, branchIdx, leafIdx, curBranches,
     m: { amp: new THREE.Vector3(9 + 9 * rm(), 7 + 8 * rm(), 8 + 9 * rm()), freq: new THREE.Vector3(.09 + .07 * rm(), .08 + .07 * rm(), .07 + .06 * rm()),
       phase: new THREE.Vector3(6.3 * rm(), 6.3 * rm(), 6.3 * rm()), axis: new THREE.Vector3(rm() - .5, rm() - .5, rm() - .5).normalize(),
       wob: .16 + .14 * rm(), wobF: .05 + .05 * rm(), spin: (rm() - .5) * .05 } });
@@ -212,6 +218,7 @@ const BGC = new THREE.Color(0xffffff), EDGE = new THREE.Color('#DCDCE4'), MID = 
 let edgeTint = .18;
 const _c = new THREE.Color();
 let selected = -1, selectedBranch = -1, selectedLeaf = -1;
+let selectedDsaTopic = null;
 let hovered = -1, paintKey = '', activeCategory = 'all';
 
 function fadeFor(bi) {
@@ -422,8 +429,9 @@ const labelEls = DS.map((d, i) => {
   el.addEventListener('wheel', (e) => { e.preventDefault(); renderer.domElement.dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
   labelsEl.appendChild(el); return el;
 });
-const branchEls = BRANCHES.map((B) => {
-  const el = document.createElement('div'); el.className = 'blbl'; el.textContent = B.name; el.style.color = B.color;
+const maxBranches = Math.max(...DS.map((d, i) => (i === 0 && d.dsaBranches) ? d.dsaBranches.length : BRANCHES.length));
+const branchEls = Array.from({ length: maxBranches }, (_, a) => {
+  const el = document.createElement('div'); el.className = 'blbl'; el.textContent = BRANCHES[a]?.name || ''; el.style.color = BRANCHES[a]?.color || '#888';
   el.style.visibility = 'hidden'; labelsEl.appendChild(el); return el;
 });
 function refreshChecks() { labelEls.forEach((el, i) => el.querySelector('.ck').textContent = done.has(DS[i].id) ? '✓' : ''); }
@@ -461,9 +469,13 @@ function updateLabels() {
   }
   branchEls.forEach((el, a) => {
     if (selected < 0) { el.style.visibility = 'hidden'; return; }
+    const curB = brains[selected].curBranches;
+    const bObj = curB ? curB[a] : BRANCHES[a];
+    if (!bObj || !brains[selected].branchIdx[a]) { el.style.visibility = 'hidden'; return; }
+    el.textContent = bObj.name; el.style.color = bObj.color;
     const p = project(brains[selected].branchIdx[a]);
     if (p.depth < 8) { el.style.visibility = 'hidden'; return; }
-    const us = uiScale(), rpx = 3.8 * F / p.depth, w = (BRANCHES[a].name.length * 7.6 + 12) * us, h = 18 * us;
+    const us = uiScale(), rpx = 3.8 * F / p.depth, w = (bObj.name.length * 7.6 + 12) * us, h = 18 * us;
     el.style.fontSize = (11 * us).toFixed(1) + 'px';
     let x = p.x + rpx + 4, y = p.y - 9;
     const hit = () => placed.some((r) => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
@@ -490,9 +502,21 @@ const tip = document.getElementById('tip');
 function showTip(n, x, y) {
   if (n < 0) { tip.style.opacity = 0; return; }
   const nd = nodes[n], d = DS[nd.bi];
-  if (nd.kind === 'core') tip.innerHTML = `<small>${esc(GROUPS[d.group].name)} · ${esc(LEVELS[d.level])}</small>${esc(d.name)}`;
-  else if (nd.kind === 'branch') tip.innerHTML = `<small>${esc(d.name)}</small>${esc(BRANCHES[nd.branch].name)}`;
-  else tip.innerHTML = `<small>${esc(d.name)} · ${esc(BRANCHES[nd.branch].name)}</small>${esc(nd.text)}`;
+  if (nd.kind === 'core') {
+    tip.innerHTML = `<small>${esc(GROUPS[d.group].name)} · ${esc(LEVELS[d.level])}</small>${esc(d.name)}`;
+  } else if (nd.kind === 'branch') {
+    const bObj = (nd.bi === 0 && d.dsaBranches) ? d.dsaBranches[nd.branch] : BRANCHES[nd.branch];
+    tip.innerHTML = `<small>${esc(d.name)}</small>${esc(bObj ? bObj.name : '')}`;
+  } else {
+    if (nd.dsaTopicId) {
+      const sub = DSA_TOPICS.find((t) => t.id === nd.dsaTopicId);
+      if (sub) tip.innerHTML = `<small>Data Structures &amp; Algorithms · ${esc(DSA_GROUPS[sub.group].name)}</small><b>${esc(sub.name)}</b><br><span style="opacity:0.85; font-size:11.5px;">${esc(sub.one.slice(0, 85))}…</span>`;
+      else tip.innerHTML = `<small>${esc(d.name)}</small>${esc(nd.text)}`;
+    } else {
+      const bObj = BRANCHES[nd.branch];
+      tip.innerHTML = `<small>${esc(d.name)} · ${esc(bObj ? bObj.name : '')}</small>${esc(nd.text)}`;
+    }
+  }
   const tx = Math.min(Math.max(16, x + 14), innerWidth - 320);
   const ty = Math.min(Math.max(16, y + 14), innerHeight - 90);
   tip.style.transform = `translate(${tx}px,${ty}px)`; tip.style.opacity = 1;
@@ -523,8 +547,88 @@ cv.addEventListener('pointerleave', () => { hovered = -1; tip.style.opacity = 0;
 
 // ---------- panel ----------
 const panel = document.getElementById('panel');
+
+function openDsaTopic(id) {
+  selectedDsaTopic = id;
+  select(0, null, { keepSub: true });
+  const leafNodeIdx = nodes.findIndex((nd) => nd.bi === 0 && nd.dsaTopicId === id);
+  if (leafNodeIdx >= 0) {
+    const nd = nodes[leafNodeIdx];
+    selectedBranch = nd.branch;
+    selectedLeaf = nd.item;
+    pulse.set = new Set([leafNodeIdx]);
+    pulse.until = performance.now() + 2500;
+    focusLeaf(0, nd.branch, nd.item, 850);
+  } else {
+    focusCam(0, 900);
+  }
+}
+
 function renderPanel(bi) {
   const d = DS[bi], g = GROUPS[d.group], idx = ORDER.indexOf(d.id), isDone = done.has(d.id);
+
+  // If viewing a detailed DSA subtopic under the DSA node:
+  if (bi === 0 && selectedDsaTopic) {
+    const sub = DSA_TOPICS.find((t) => t.id === selectedDsaTopic) || DSA_TOPICS[0];
+    const subDone = done.has(sub.id);
+    panel.innerHTML = `
+      <div class="p-top">
+        <button class="dsa-back-btn" data-act="dsa-back" title="Back to High-Level CS Overview">← Back to DSA Overview</button>
+        <span class="pill" style="--c:${DSA_GROUPS[sub.group].color}">${esc(DSA_GROUPS[sub.group].name)}</span>
+        <span class="lvl">${esc(DSA_LEVELS[sub.level])}</span>
+        <button class="x" data-act="close" aria-label="Close">✕</button>
+      </div>
+      <h2>${esc(sub.name)}</h2>
+      <p class="one">${esc(sub.one)}</p>
+      <div class="ds-viz">${renderViz(sub.id)}</div>
+      <div class="p-actions">
+        <button class="learned ${subDone ? 'on' : ''}" data-act="learn-sub" data-sub="${sub.id}">
+          ${subDone ? '✓ Understood' : 'Mark as understood'}
+        </button>
+      </div>
+
+      <h3><i style="background:#5B8DEF"></i>Operations &amp; Cost</h3>
+      <table class="ops">
+        ${sub.ops.map(([o, c], j) => `<tr data-item="ops-${j}"><td>${esc(o)}</td><td><span class="cx ${cxClass(c)}">${esc(c)}</span></td></tr>`).join('')}
+      </table>
+
+      <h3><i style="background:#34A77A"></i>Use It When</h3>
+      <ul class="items" style="--c:#34A77A">${sub.use.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+
+      <h3><i style="background:#9A6BE0"></i>Core Patterns</h3>
+      <ul class="items" style="--c:#9A6BE0">${sub.patterns.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+
+      <h3><i style="background:#EE8A3C"></i>Practice Problems</h3>
+      <ul class="items" style="--c:#EE8A3C">
+        ${sub.problems.map((x) => `<li><a href="https://leetcode.com/problemset/?search=${encodeURIComponent(x)}" target="_blank" rel="noopener">${esc(x)}</a></li>`).join('')}
+      </ul>
+
+      <h3><i style="background:#E05561"></i>Common Pitfalls</h3>
+      <ul class="items" style="--c:#E05561">${sub.pitfalls.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+
+      <h3><i style="background:#0f1020"></i>In Python</h3>
+      <div class="code"><button data-act="copy">Copy</button><pre>${esc(sub.py)}</pre></div>
+
+      <h3><i style="background:#ccc"></i>Related Structures</h3>
+      <div class="chips">
+        ${sub.related.map((r) => {
+          const o = DSA_TOPICS.find((x) => x.id === r);
+          if (!o) return '';
+          return `<button data-dsa-sub="${r}"><i style="background:${DSA_GROUPS[o.group].color}"></i>${esc(o.name)}</button>`;
+        }).join('')}
+      </div>
+
+      <div class="nav">
+        <button data-act="dsa-back">← Back to Overview</button>
+        <span>DSA Subtopic</span>
+        <button data-dsa-sub="${DSA_ORDER[(DSA_ORDER.indexOf(sub.id) + 1) % DSA_ORDER.length]}">Next Topic →</button>
+      </div>
+    `;
+    panel.scrollTop = 0;
+    return;
+  }
+
+  // Otherwise, render the High-Level CS field view:
   const renderCore = (B) => `
     <h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
     <table class="ops core-tbl">
@@ -537,6 +641,38 @@ function renderPanel(bi) {
   const list = (B) => `<h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
     <ul class="items" style="--c:${B.color}">${d[B.key].map((x, j) => `<li data-item="${B.key}-${j}">${esc(x)}</li>`).join('')}</ul>`;
   const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === bi || (auto.loopBi < 0 && STEPS[auto.i]?.bi === bi));
+
+  let dsaCatalogHtml = '';
+  if (bi === 0) {
+    dsaCatalogHtml = `
+      <div class="dsa-sub-section">
+        <div class="dsa-sub-header">
+          <h3><i style="background:#3B6FE0"></i>Detailed Data Structures &amp; Algorithms (${DSA_TOPICS.length})</h3>
+          <div class="dsa-sub-tabs">
+            <button class="dsa-tab act" data-dsa-tab="all">All (24)</button>
+            <button class="dsa-tab" data-dsa-tab="linear"><i style="background:#3B6FE0"></i>Linear (6)</button>
+            <button class="dsa-tab" data-dsa-tab="hashing"><i style="background:#E0703B"></i>Hashing (3)</button>
+            <button class="dsa-tab" data-dsa-tab="trees"><i style="background:#2E9E6A"></i>Trees &amp; Heaps (5)</button>
+            <button class="dsa-tab" data-dsa-tab="graphs"><i style="background:#8A4FD8"></i>Graphs (3)</button>
+            <button class="dsa-tab" data-dsa-tab="range"><i style="background:#D9447A"></i>Range (2)</button>
+            <button class="dsa-tab" data-dsa-tab="algorithms"><i style="background:#D97706"></i>Algorithms (5)</button>
+          </div>
+        </div>
+        <div class="dsa-grid" id="dsaGrid">
+          ${DSA_TOPICS.map((t) => `
+            <button class="dsa-card" data-dsa-sub="${t.id}" data-group="${t.group}">
+              <div class="dsa-card-top">
+                <span class="dsa-card-dot" style="background:${DSA_GROUPS[t.group].color}"></span>
+                <span class="dsa-card-name">${esc(t.name)}</span>
+                ${done.has(t.id) ? '<span class="done">✓</span>' : ''}
+              </div>
+              <p class="dsa-card-desc">${esc(t.one)}</p>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
 
   panel.innerHTML = `
     <div class="p-top"><span class="pill" style="--c:${g.color}">${esc(g.name)}</span><span class="lvl">${esc(LEVELS[d.level])}</span>
@@ -551,6 +687,7 @@ function renderPanel(bi) {
       </button>
     </div>
     ${renderCore(BRANCHES[0])}
+    ${dsaCatalogHtml}
     ${BRANCHES.slice(1).map(list).join('')}
     <h3><i style="background:#0f1020"></i>Code Example</h3>
     <div class="code"><button data-act="copy">Copy</button><pre>${esc(d.py)}</pre></div>
@@ -561,6 +698,36 @@ function renderPanel(bi) {
 }
 
 panel.addEventListener('click', async (e) => {
+  const tab = e.target.closest('.dsa-tab');
+  if (tab) {
+    const cat = tab.dataset.dsaTab;
+    panel.querySelectorAll('.dsa-tab').forEach((b) => b.classList.toggle('act', b === tab));
+    panel.querySelectorAll('.dsa-card').forEach((card) => {
+      card.style.display = (cat === 'all' || card.dataset.group === cat) ? 'block' : 'none';
+    });
+    return;
+  }
+  const dsaCard = e.target.closest('[data-dsa-sub]');
+  if (dsaCard) {
+    openDsaTopic(dsaCard.dataset.dsaSub);
+    return;
+  }
+  const backBtn = e.target.closest('[data-act="dsa-back"]');
+  if (backBtn) {
+    selectedDsaTopic = null;
+    renderPanel(0);
+    focusCam(0, 800);
+    return;
+  }
+  const learnSub = e.target.closest('[data-act="learn-sub"]');
+  if (learnSub) {
+    const subId = learnSub.dataset.sub;
+    done.has(subId) ? done.delete(subId) : done.add(subId);
+    saveDone(); renderProgress(); refreshChecks();
+    renderPanel(0);
+    return;
+  }
+
   const go = e.target.closest('[data-go]'); if (go) { select(byId[go.dataset.go]); return; }
   const btn = e.target.closest('[data-act]'); if (!btn) return;
   const act = btn.dataset.act, d = DS[selected];
@@ -604,9 +771,10 @@ function highlightCurrentNode(fly = true) {
     pulse.set = new Set([bn, ...leaves]);
     pulse.until = performance.now() + 2500;
     if (fly) focusBranch(selected, selectedBranch, 800);
-    const B = BRANCHES[selectedBranch];
-    if (panel.classList.contains('open')) {
-      const h = panel.querySelector(`[data-sec="${B.key}"]`);
+    const curB = brains[selected].curBranches;
+    const bObj = curB ? curB[selectedBranch] : BRANCHES[selectedBranch];
+    if (panel.classList.contains('open') && bObj) {
+      const h = panel.querySelector(`[data-sec="${bObj.key}"]`);
       if (h) {
         panel.scrollTo({ top: Math.max(0, h.offsetTop - 18), behavior: 'smooth' });
         h.classList.add('flash');
@@ -623,13 +791,20 @@ function highlightCurrentNode(fly = true) {
       pulse.set = new Set([ln]);
       pulse.until = performance.now() + 2500;
       if (fly) focusLeaf(selected, selectedBranch, selectedLeaf, 800);
-      const B = BRANCHES[selectedBranch];
-      if (panel.classList.contains('open')) {
-        const itemEl = panel.querySelector(`[data-item="${B.key}-${selectedLeaf}"]`);
-        if (itemEl) {
-          itemEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          itemEl.classList.add('flash');
-          setTimeout(() => itemEl.classList.remove('flash'), 1600);
+      const nd = nodes[ln];
+      if (nd && nd.dsaTopicId) {
+        selectedDsaTopic = nd.dsaTopicId;
+        renderPanel(0);
+      } else {
+        const curB = brains[selected].curBranches;
+        const bObj = curB ? curB[selectedBranch] : BRANCHES[selectedBranch];
+        if (panel.classList.contains('open') && bObj) {
+          const itemEl = panel.querySelector(`[data-item="${bObj.key}-${selectedLeaf}"]`);
+          if (itemEl) {
+            itemEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            itemEl.classList.add('flash');
+            setTimeout(() => itemEl.classList.remove('flash'), 1600);
+          }
         }
       }
       const p = project(ln);
@@ -648,6 +823,8 @@ function navigateUp() {
   } else if (selectedBranch >= 0) {
     // Level 2 -> Level 1
     selectedBranch = -1;
+    selectedDsaTopic = null;
+    if (selected === 0) renderPanel(0);
     highlightCurrentNode(true);
   } else {
     // Level 1 -> Level 0
@@ -665,6 +842,9 @@ function navigateDown() {
     select(byId[firstId]);
     return;
   }
+  const curB = brains[selected].curBranches;
+  const numBranches = curB ? curB.length : BRANCHES.length;
+
   if (selectedBranch < 0) {
     // Level 1 -> Level 2 (First Branch)
     selectedBranch = 0;
@@ -694,6 +874,9 @@ function navigateNext() {
     select(byId[matching[0] || ORDER[0]]);
     return;
   }
+  const curB = brains[selected].curBranches;
+  const numBranches = curB ? curB.length : BRANCHES.length;
+
   if (selectedBranch < 0) {
     // Next topic in matching category
     const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
@@ -702,7 +885,7 @@ function navigateNext() {
     select(byId[matching[nextIdx]]);
   } else if (selectedLeaf < 0) {
     // Next branch
-    selectedBranch = (selectedBranch + 1) % BRANCHES.length;
+    selectedBranch = (selectedBranch + 1) % numBranches;
     highlightCurrentNode(true);
   } else {
     // Next leaf
@@ -721,6 +904,9 @@ function navigatePrev() {
     select(byId[matching[matching.length - 1] || ORDER[0]]);
     return;
   }
+  const curB = brains[selected].curBranches;
+  const numBranches = curB ? curB.length : BRANCHES.length;
+
   if (selectedBranch < 0) {
     // Prev topic in matching category
     const matching = ORDER.filter((id) => activeCategory === 'all' || DS[byId[id]].group === activeCategory);
@@ -729,7 +915,7 @@ function navigatePrev() {
     select(byId[matching[prevIdx]]);
   } else if (selectedLeaf < 0) {
     // Prev branch
-    selectedBranch = (selectedBranch - 1 + BRANCHES.length) % BRANCHES.length;
+    selectedBranch = (selectedBranch - 1 + numBranches) % numBranches;
     highlightCurrentNode(true);
   } else {
     // Prev leaf
@@ -751,24 +937,34 @@ function select(bi, node = null, opts = {}) {
   if (!node || node.kind === 'core') {
     selectedBranch = -1;
     selectedLeaf = -1;
+    if (changed || !opts.keepSub) selectedDsaTopic = null;
   } else if (node.kind === 'branch') {
     selectedBranch = node.branch;
     selectedLeaf = -1;
+    selectedDsaTopic = null;
   } else if (node.kind === 'leaf') {
     selectedBranch = node.branch;
     selectedLeaf = node.item;
+    if (node.dsaTopicId) {
+      selectedDsaTopic = node.dsaTopicId;
+    }
   }
   document.body.classList.add('exploring');
   closeList();
-  if (changed) { renderPanel(bi); focusCam(bi, opts.flyMs || 1200, !!opts.noPanel); }
+  renderPanel(bi);
+  if (changed) focusCam(bi, opts.flyMs || 1200, !!opts.noPanel);
   if (!opts.noPanel) { panel.classList.add('open'); document.body.classList.add('panel-open'); }
   else if (opts.auto) { panel.classList.remove('open'); document.body.classList.remove('panel-open'); }
-  if (location.hash.slice(1) !== DS[bi].id) location.hash = DS[bi].id;
+  if (location.hash.slice(1) !== (selectedDsaTopic || DS[bi].id)) location.hash = selectedDsaTopic || DS[bi].id;
   if (node && node.kind !== 'core') {
-    const key = BRANCHES[node.branch].key;
-    const target = node.kind === 'leaf' ? panel.querySelector(`[data-item="${key}-${node.item}"]`) : panel.querySelector(`[data-sec="${key}"]`);
-    if (target) {
-      setTimeout(() => { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.add('flash'); setTimeout(() => target.classList.remove('flash'), 1600); }, changed ? 350 : 0);
+    const curB = brains[bi].curBranches;
+    const bObj = curB ? curB[node.branch] : BRANCHES[node.branch];
+    if (bObj && !node.dsaTopicId) {
+      const key = bObj.key;
+      const target = node.kind === 'leaf' ? panel.querySelector(`[data-item="${key}-${node.item}"]`) : panel.querySelector(`[data-sec="${key}"]`);
+      if (target) {
+        setTimeout(() => { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.classList.add('flash'); setTimeout(() => target.classList.remove('flash'), 1600); }, changed ? 350 : 0);
+      }
     }
     if (node.kind === 'branch') {
       const bn = brains[bi].branchIdx[node.branch];
@@ -788,7 +984,7 @@ function select(bi, node = null, opts = {}) {
 }
 
 function deselect() {
-  selected = -1; selectedBranch = -1; selectedLeaf = -1; follow = -1;
+  selected = -1; selectedBranch = -1; selectedLeaf = -1; selectedDsaTopic = null; follow = -1;
   panel.classList.remove('open'); document.body.classList.remove('panel-open');
   tip.style.opacity = 0;
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
@@ -870,7 +1066,17 @@ addEventListener('keydown', (e) => {
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
 });
-function fromHash() { const id = location.hash.slice(1); if (id && byId[id] !== undefined && byId[id] !== selected) select(byId[id]); }
+function fromHash() {
+  const id = location.hash.slice(1);
+  if (!id) return;
+  if (DSA_TOPICS.some((t) => t.id === id)) {
+    openDsaTopic(id);
+    return;
+  }
+  if (byId[id] !== undefined && byId[id] !== selected) {
+    select(byId[id]);
+  }
+}
 addEventListener('hashchange', fromHash);
 
 // ---------- search with autocomplete ----------
@@ -878,13 +1084,51 @@ const qEl = document.getElementById('q'), suggEl = document.getElementById('sugg
 const INDEX = nodes.map((nd, n) => {
   const d = DS[nd.bi];
   if (nd.kind === 'core') return { n, kind: 0, title: d.name, sub: `${GROUPS[d.group].name} · ${LEVELS[d.level]}`, color: GROUPS[d.group].color };
-  const B = BRANCHES[nd.branch];
+  const curB = brains[nd.bi].curBranches;
+  const B = curB ? curB[nd.branch] : BRANCHES[nd.branch];
   if (nd.kind === 'branch') return { n, kind: 1, title: `${B.name}`, sub: d.name, color: B.color };
-  return { n, kind: 2, title: nd.text, sub: `${d.name} · ${B.name}`, color: B.color };
+  return { n, kind: 2, title: nd.text, sub: `${d.name} · ${B.name}`, color: B.color, dsaId: nd.dsaTopicId };
+});
+
+// Also add all 24 detailed DSA topics to index for direct jump:
+DSA_TOPICS.forEach((t) => {
+  const leafNodeIdx = nodes.findIndex((nd) => nd.bi === 0 && nd.dsaTopicId === t.id);
+  INDEX.push({
+    n: leafNodeIdx >= 0 ? leafNodeIdx : brains[0].core,
+    kind: 0,
+    dsaId: t.id,
+    title: t.name,
+    sub: `Data Structures & Algorithms · ${DSA_GROUPS[t.group].name} · ${DSA_LEVELS[t.level]}`,
+    color: DSA_GROUPS[t.group].color
+  });
 });
 
 const ALIAS = {
   'dsa': 'data structures algorithms dsa sorting binary search trees graphs big o leetcode hash maps heaps stacks queues',
+  'array': 'list dynamic array contiguous buffer vector',
+  'string': 'text characters slice substring char',
+  'hash-map': 'dict dictionary hashtable hash table map key value o(1)',
+  'hash-set': 'set unique elements membership o(1)',
+  'linked-list': 'nodes pointers singly doubly list',
+  'stack': 'lifo call stack push pop dfs undo',
+  'queue': 'fifo bfs push pop queue line buffer',
+  'deque': 'double ended queue sliding window maximum',
+  'binary-tree': 'tree root left right subtree traversal',
+  'bst': 'binary search tree inorder search insert',
+  'balanced-bst': 'avl red black tree treemap sortedlist self balancing',
+  'heap': 'priority queue pq min-heap max-heap top k heapq',
+  'grid': 'matrix 2d board coordinates row col',
+  'graph': 'vertices edges adjacency list bfs dfs shortest path',
+  'trie': 'prefix tree autocomplete search prefix radix',
+  'union-find': 'disjoint set dsu connected components Kruskal cycle',
+  'lru-cache': 'cache least recently used ordered dict eviction policy',
+  'segment-tree': 'range query point update interval tree range sum range min',
+  'fenwick-tree': 'binary indexed tree bit prefix sum dynamic range sum',
+  'binary-search': 'bisect bsearch lower bound upper bound divide log n',
+  'divide-and-conquer': 'merge sort quick sort master theorem d&c',
+  'greedy': 'interval scheduling greedy choice local optimal activity selection',
+  'backtracking': 'n queens permutations combinations sudoku prune dfs',
+  'dynamic-programming': 'dp memoization tabulation knapsack overlapping subproblems optimal substructure',
   'architecture': 'cpu hardware silicon registers cache assembly instruction set risc-v x86 alu clock memory hierarchy',
   'os': 'operating system processes threads virtual memory scheduling kernel linux syscalls deadlocks concurrency',
   'networking': 'tcp ip sockets udp http dns routing packet switching packets osi layers protocols latency',
@@ -897,7 +1141,11 @@ const ALIAS = {
   'cybersecurity': 'cryptography hashing encryption rsa zero trust authentication ssl tls sql injection buffer overflow security',
   'theory-computation': 'turing machines p vs np decidability automata computability halting problem complexity classes formal grammars'
 };
-INDEX.forEach((it) => { if (it.kind === 0) it.alias = ALIAS[DS[nodes[it.n].bi].id] || ''; });
+INDEX.forEach((it) => {
+  const dsaKey = it.dsaId;
+  const key = dsaKey || (it.kind === 0 ? DS[nodes[it.n]?.bi]?.id : '');
+  it.alias = ALIAS[key] || '';
+});
 const fold = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 INDEX.forEach((it) => { it.ft = fold(it.title); it.fs = fold(it.sub); it.fa = fold(it.alias || ''); });
 
@@ -910,7 +1158,7 @@ function score(it, words, q) {
     else if (inA >= 0) s += 18; else s += 3;
   }
   if (it.ft === q) s += 60; else if (it.ft.startsWith(q)) s += 25;
-  s += [14, 4, 0][it.kind];
+  s += [14, 4, 0][it.kind] || 8;
   return s - it.ft.length * .02;
 }
 function hl(text, words) {
@@ -932,7 +1180,7 @@ function runSearch() {
   active = 0;
   suggEl.innerHTML = results.length ? results.map((it, i) => `<div class="sg${i === 0 ? ' act' : ''}" role="option" data-i="${i}">
       <i class="${it.kind === 0 ? 'core' : ''}" style="background:${it.color}"></i>
-      <div><div class="t">${hl(it.title, words)}</div><div class="s">${it.kind === 0 ? 'Topic · ' : ''}${esc(it.sub)}</div></div></div>`).join('')
+      <div><div class="t">${hl(it.title, words)}</div><div class="s">${it.dsaId ? 'DSA Subtopic · ' : it.kind === 0 ? 'Topic · ' : ''}${esc(it.sub)}</div></div></div>`).join('')
     : `<div class="sg-empty">No matches for “${esc(qEl.value.trim())}”</div>`;
   suggEl.classList.add('open'); qEl.setAttribute('aria-expanded', 'true');
 }
@@ -944,8 +1192,12 @@ function setActive(i) {
 }
 function choose(i) {
   const it = results[i]; if (!it) return;
-  const nd = nodes[it.n];
   closeSugg(); qEl.blur();
+  if (it.dsaId) {
+    openDsaTopic(it.dsaId);
+    return;
+  }
+  const nd = nodes[it.n];
   select(nd.bi, nd.kind === 'core' ? null : nd);
   pulse.set = new Set([it.n]); pulse.until = performance.now() + 2600;
 }
@@ -966,7 +1218,11 @@ const STEPS = [];
 ORDER.forEach((id) => {
   const bi = byId[id];
   STEPS.push({ bi, br: -1, dur: 6800 });
-  BRANCHES.forEach((B, a) => STEPS.push({ bi, br: a, dur: 3200 + 300 * Math.min(DS[bi][B.key].length, 6) }));
+  const curB = brains[bi].curBranches || BRANCHES;
+  curB.forEach((B, a) => {
+    const itLen = B.ids ? B.ids.length : (DS[bi][B.key]?.length || 3);
+    STEPS.push({ bi, br: a, dur: 3200 + 300 * Math.min(itLen, 6) });
+  });
 });
 const SPEEDS = [.5, 1, 1.5, 2];
 const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true, loop: 'off', loopBi: -1 };
@@ -978,7 +1234,8 @@ const pTitle = playerEl.querySelector('.pt'), pFill = playerEl.querySelector('.p
 
 function getTopicRange(bi) {
   const start = STEPS.findIndex((s) => s.bi === bi && s.br < 0);
-  const count = 1 + BRANCHES.length;
+  const curB = brains[bi]?.curBranches || BRANCHES;
+  const count = 1 + curB.length;
   return { start: start < 0 ? 0 : start, end: start < 0 ? count - 1 : start + count - 1, count };
 }
 
@@ -1037,10 +1294,11 @@ function runStep() {
     pulse.set = new Set([b.core]); pulse.until = performance.now() + s.dur / auto.speed;
     setCaption(`${String(n).padStart(2, '0')} / ${ORDER.length} · ${GROUPS[d.group].name} · ${LEVELS[d.level]}`, d.name, d.one);
   } else {
-    const B = BRANCHES[s.br], bn = b.branchIdx[s.br];
+    const curB = b.curBranches || BRANCHES;
+    const B = curB[s.br], bn = b.branchIdx[s.br];
     const set = new Set([bn]); for (let k = b.first; k < b.first + b.count; k++) if (nodes[k].kind === 'leaf' && nodes[k].branch === s.br) set.add(k);
     pulse.set = set; pulse.until = performance.now() + s.dur / auto.speed;
-    const items = d[B.key].slice(0, 5).map((x) => Array.isArray(x) ? `${x[0]}: ${x[1]}` : x);
+    const items = B.ids ? B.ids.map((id) => DSA_TOPICS.find((x) => x.id === id)?.name || id) : (d[B.key] || []).slice(0, 5).map((x) => Array.isArray(x) ? `${x[0]}: ${x[1]}` : x);
     setCaption(`${String(n).padStart(2, '0')} · ${d.name}`, B.name, items.join('  ·  '));
     if (panel.classList.contains('open')) {
       const h = panel.querySelector(`[data-sec="${B.key}"]`);
