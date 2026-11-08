@@ -1,10 +1,7 @@
-
 import * as THREE from 'three';
 import { DS, GROUPS, BRANCHES, LEVELS, ORDER } from './data.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { renderViz } from './viz.js';
-
-
 
 // ---------- helpers ----------
 function rng(seed) {                       // deterministic PRNG from a string seed
@@ -24,21 +21,29 @@ const cxClass = (c) => /O\(1\)|α/.test(c) ? 'g' : /log/.test(c) ? 't' : /²/.te
 
 // ---------- progress ----------
 let done = new Set();
-try { done = new Set(JSON.parse(localStorage.getItem('dsmap-done') || '[]')); } catch (e) {}
-const saveDone = () => { try { localStorage.setItem('dsmap-done', JSON.stringify([...done])); } catch (e) {} };
+try { done = new Set(JSON.parse(localStorage.getItem('csmap-done') || localStorage.getItem('dsmap-done') || '[]')); } catch (e) {}
+const saveDone = () => { try { localStorage.setItem('csmap-done', JSON.stringify([...done])); } catch (e) {} };
 function renderProgress() { document.getElementById('progress').innerHTML = `<b>${done.size}</b> / ${DS.length} understood`; }
 
-// ---------- layout: where each structure's cluster sits ----------
-const GROUP_CENTER = { linear: [-400, 10, 40], hashing: [-110, 170, -120], trees: [190, -40, 70], graphs: [470, 110, -60], range: [300, -250, -190], algorithms: [-150, -220, 100] };
+// ---------- layout: where each topic's cluster sits ----------
+const GROUP_CENTER = {
+  foundations: [-320, 110, 40],
+  systems:     [320, 130, -50],
+  data:        [-280, -170, -70],
+  software:    [270, -170, 60],
+  ai_sec:      [0, 30, 190],
+};
+
 const CENTERS = (() => {
-  const R = rng('layout-v3'), placed = [], out = [];
+  const R = rng('layout-v4-cs'), placed = [], out = [];
   for (const d of DS) {
-    const gc = GROUP_CENTER[d.group]; let minD = 175, s = null;
+    const gc = GROUP_CENTER[d.group] || [0, 0, 0];
+    let minD = 180, s = null;
     for (let k = 0; !s; k++) {
       if (k > 0 && k % 400 === 0) minD *= .93;
       const x = R() * 2 - 1, y = R() * 2 - 1, z = R() * 2 - 1;
       if (x * x + y * y + z * z > 1) continue;
-      const p = [gc[0] + x * 210, gc[1] + y * 130, gc[2] + z * 170];
+      const p = [gc[0] + x * 190, gc[1] + y * 130, gc[2] + z * 160];
       if (placed.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]) > minD)) s = p;
     }
     placed.push(s); out.push(new THREE.Vector3(...s));
@@ -47,7 +52,7 @@ const CENTERS = (() => {
 })();
 const CLOUD = CENTERS.reduce((a, c) => a.add(c), new THREE.Vector3()).multiplyScalar(1 / CENTERS.length);
 
-// ---------- graph: core → branches → leaves for each structure ----------
+// ---------- graph: core → branches → leaves for each topic ----------
 const nodes = [], links = [], brains = [];
 const RAD = 46;
 DS.forEach((d, bi) => {
@@ -62,7 +67,7 @@ DS.forEach((d, bi) => {
     return [x + w * Math.sin(y / RAD * 1.7 + ph[0]), y + w * Math.sin(z / RAD * 1.7 + ph[1]), z + w * Math.sin(x / RAD * 1.7 + ph[2])];
   };
   const core = nodes.length;
-  nodes.push({ bi, kind: 'core', color: GROUPS[d.group].color, r: 6.4, local: [0, 0, 0] });
+  nodes.push({ bi, kind: 'core', color: GROUPS[d.group].color, r: 6.8, local: [0, 0, 0] });
   const branchIdx = [];
   BRANCHES.forEach((B, a) => {
     const yv = 1 - 2 * (a + .5) / BRANCHES.length, rr = Math.sqrt(1 - yv * yv), th = Math.PI * (3 - Math.sqrt(5)) * a;
@@ -70,14 +75,14 @@ DS.forEach((d, bi) => {
     const dist = RAD * (.8 + .45 * r());
     const bp = [dir[0] * dist, dir[1] * dist, dir[2] * dist];
     const b = nodes.length;
-    nodes.push({ bi, kind: 'branch', branch: a, color: B.color, r: 3.6, local: warp(bp) });
+    nodes.push({ bi, kind: 'branch', branch: a, color: B.color, r: 3.8, local: warp(bp) });
     links.push([core, b, 'in']); branchIdx.push(b);
     const items = d[B.key].slice(0, 9);
     items.forEach((it, j) => {
       const ld = norm([dir[0] + (r() - .5) * 1.5, dir[1] + (r() - .5) * 1.5, dir[2] + (r() - .5) * 1.5]);
       const ls = RAD * (.45 + .5 * r());
       const l = nodes.length;
-      nodes.push({ bi, kind: 'leaf', branch: a, item: j, color: B.leaf, r: 2.1,
+      nodes.push({ bi, kind: 'leaf', branch: a, item: j, color: B.leaf, r: 2.2,
         text: Array.isArray(it) ? `${it[0]}: ${it[1]}` : it,
         local: warp([bp[0] + ld[0] * ls, bp[1] + ld[1] * ls, bp[2] + ld[2] * ls]) });
       links.push([b, l, 'in']);
@@ -89,7 +94,8 @@ DS.forEach((d, bi) => {
       phase: new THREE.Vector3(6.3 * rm(), 6.3 * rm(), 6.3 * rm()), axis: new THREE.Vector3(rm() - .5, rm() - .5, rm() - .5).normalize(),
       wob: .16 + .14 * rm(), wobF: .05 + .05 * rm(), spin: (rm() - .5) * .05 } });
 });
-// links between related structures (core ↔ core, once per pair)
+
+// links between related topics (core ↔ core, once per pair)
 const relSeen = new Set();
 DS.forEach((d, i) => d.related.forEach((rid) => {
   const j = byId[rid]; if (j === undefined) return;
@@ -137,7 +143,7 @@ mGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3).setUsage(THREE.Dyn
 const mids = new THREE.Points(mGeo, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true })); mids.frustumCulled = false;
 scene.add(edges, mids, mesh);
 
-// dark-mode extras: soft additive glow behind every node, and a distant starfield
+// dark-mode extras: soft additive glow behind nodes
 const glowTex = (() => {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -175,6 +181,9 @@ function step(t) {
     _v.set(nd.local[0], nd.local[1], nd.local[2]).applyQuaternion(quat[b]).add(CENTERS[b]).add(drift[b]);
     world[3 * n] = _v.x; world[3 * n + 1] = _v.y; world[3 * n + 2] = _v.z;
     let rs = nd.r;
+    if (activeCategory !== 'all' && DS[b].group !== activeCategory) {
+      rs *= .65; // scale down non-matching category nodes
+    }
     if (pulse.until > performance.now() && pulse.set.has(n)) rs *= (nd.kind === 'leaf' ? 1.35 : 1.6) + .45 * Math.sin(performance.now() / 140);
     _m.makeScale(rs, rs, rs).setPosition(_v); mesh.setMatrixAt(n, _m);
   }
@@ -196,18 +205,28 @@ function step(t) {
 const posOf = (n, out) => out.set(world[3 * n], world[3 * n + 1], world[3 * n + 2]);
 const centerOf = (bi, out) => out.copy(CENTERS[bi]).add(drift[bi]);
 
-// colour state: fade everything not in focus towards white
+// colour state: fade everything not in focus towards background
 const BGC = new THREE.Color(0xffffff), EDGE = new THREE.Color('#DCDCE4'), MID = new THREE.Color('#A6BDEE'), REL = new THREE.Color('#E6E6EE');
 let edgeTint = .18;
 const _c = new THREE.Color();
-let selected = -1, hovered = -1, paintKey = '';
+let selected = -1, hovered = -1, paintKey = '', activeCategory = 'all';
+
 function fadeFor(bi) {
-  if (selected >= 0) { if (bi === selected) return 0; return DS[selected].related.includes(DS[bi].id) || DS[bi].related.includes(DS[selected].id) ? .55 : .88; }
+  if (activeCategory !== 'all' && DS[bi].group !== activeCategory) {
+    return .93; // dimmed non-category nodes
+  }
+  if (selected >= 0) {
+    if (bi === selected) return 0;
+    return DS[selected].related.includes(DS[bi].id) || DS[bi].related.includes(DS[selected].id) ? .55 : .88;
+  }
   if (hovered >= 0) return bi === hovered ? 0 : .4;
   return 0;
 }
+
 function paint() {
-  const key = selected + ':' + hovered; if (key === paintKey) return; paintKey = key;
+  const key = selected + ':' + hovered + ':' + activeCategory;
+  if (key === paintKey) return;
+  paintKey = key;
   const f = brains.map((_, i) => fadeFor(i));
   for (let n = 0; n < N; n++) mesh.setColorAt(n, _c.copy(baseCol[n]).lerp(BGC, f[nodes[n].bi]));
   mesh.instanceColor.needsUpdate = true;
@@ -223,7 +242,7 @@ function paint() {
     if (kind === 'rel') {
       const on = selected >= 0 && (i === selected || j === selected);
       if (on) _c.set(GROUPS[DS[selected].group].color).lerp(BGC, .45);
-      else _c.copy(REL).lerp(BGC, selected >= 0 ? .7 : hovered >= 0 && i !== hovered && j !== hovered ? .5 : 0);
+      else _c.copy(REL).lerp(BGC, selected >= 0 ? .7 : hovered >= 0 && i !== hovered && j !== hovered ? .5 : (activeCategory !== 'all' && (DS[i].group !== activeCategory || DS[j].group !== activeCategory)) ? .92 : 0);
     } else {
       _c.copy(EDGE).lerp(baseCol[brains[nodes[a].bi].core], edgeTint).lerp(BGC, .9 * f[nodes[a].bi]);
     }
@@ -234,9 +253,65 @@ function paint() {
   labelEls.forEach((el, i) => { el.classList.toggle('sel', i === selected); el.classList.toggle('hov', i === hovered && i !== selected); });
 }
 
+// ---------- category filtering ----------
+function setCategory(cat, fly = true) {
+  if (activeCategory === cat) {
+    activeCategory = 'all';
+  } else {
+    activeCategory = cat;
+  }
+  updateCategoryUI();
+  paintKey = '';
+  paint();
+  if (fly) {
+    if (activeCategory === 'all') {
+      overview(1100);
+    } else {
+      focusCategory(activeCategory, 1200);
+    }
+  }
+  if (listEl.classList.contains('open')) renderList();
+}
+
+function focusCategory(cat, ms = 1100) {
+  const gc = GROUP_CENTER[cat];
+  if (!gc) return;
+  const target = new THREE.Vector3(...gc);
+  const dist = isWide() ? 720 : 960;
+  const camPos = target.clone().add(new THREE.Vector3(0, 90, dist));
+  flyTo(camPos, target, ms);
+}
+
+function updateCategoryUI() {
+  document.querySelectorAll('.cat-pill').forEach((btn) => {
+    btn.classList.toggle('act', btn.dataset.cat === activeCategory);
+  });
+}
+
+function renderCategoryButtons() {
+  const cats = [
+    { key: 'all', name: 'All' },
+    ...Object.entries(GROUPS).map(([k, g]) => ({ key: k, name: g.name, color: g.color })),
+  ];
+  const heroHtml = `<span class="legend-label">Filter:</span>` + cats.map((c) => `
+    <button class="cat-pill${c.key === activeCategory ? ' act' : ''}" data-cat="${c.key}" aria-label="Filter by ${esc(c.name)}">
+      ${c.color ? `<i style="background:${c.color}"></i>` : ''}<span>${esc(c.name)}</span>
+    </button>`).join('');
+
+  const barHtml = cats.map((c) => `
+    <button class="cat-pill${c.key === activeCategory ? ' act' : ''}" data-cat="${c.key}" aria-label="Filter by ${esc(c.name)}">
+      ${c.color ? `<i style="background:${c.color}"></i>` : ''}<span>${esc(c.name)}</span>
+    </button>`).join('');
+
+  const leg = document.getElementById('legend');
+  if (leg) leg.innerHTML = heroHtml;
+  const cbar = document.getElementById('catBar');
+  if (cbar) cbar.innerHTML = barHtml;
+}
+
 // ---------- theme ----------
 let dark = false;
-try { const s = localStorage.getItem('dsmap-theme'); dark = s ? s === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) {}
+try { const s = localStorage.getItem('csmap-theme'); dark = s ? s === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) {}
 function applyTheme() {
   const bg = dark ? '#090a12' : '#ffffff';
   document.body.classList.toggle('dark', dark);
@@ -249,7 +324,7 @@ function applyTheme() {
   paintKey = '';
   if (dark) step((performance.now() - (window.__t0 || 0)) / 1000);
 }
-function toggleTheme() { dark = !dark; try { localStorage.setItem('dsmap-theme', dark ? 'dark' : 'light'); } catch (e) {} applyTheme(); }
+function toggleTheme() { dark = !dark; try { localStorage.setItem('csmap-theme', dark ? 'dark' : 'light'); } catch (e) {} applyTheme(); }
 
 // ---------- controls & camera moves ----------
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -272,7 +347,6 @@ function basis(dir) {
   const up = new THREE.Vector3().crossVectors(dir, right).normalize();
   return { right, up };
 }
-// pick the viewing direction with the clearest line of sight past the other clusters
 function clearestDir(bi, dist) {
   const c = centerOf(bi, new THREE.Vector3());
   const others = brains.map((_, j) => j).filter((j) => j !== bi).map((j) => centerOf(j, new THREE.Vector3()));
@@ -298,8 +372,8 @@ function focusCam(bi, ms = 1200, centred = false) {
   flyTo(t.clone().addScaledVector(dir, n), t, ms);
 }
 function overview(ms = 1300) {
-  const wide = isWide(), dist = wide ? 1080 : 1600;
-  const t = wide ? CLOUD.clone().add(new THREE.Vector3(-230, 0, 0)) : CLOUD.clone().add(new THREE.Vector3(0, -150, 0));
+  const wide = isWide(), dist = wide ? 1120 : 1650;
+  const t = wide ? CLOUD.clone().add(new THREE.Vector3(-220, 0, 0)) : CLOUD.clone().add(new THREE.Vector3(0, -140, 0));
   flyTo(t.clone().add(new THREE.Vector3(0, 110, dist)), t, ms);
 }
 function explore() {
@@ -338,12 +412,16 @@ function project(n) {
 function updateLabels() {
   camera.getWorldDirection(_dir);
   const W = innerWidth, H = innerHeight, F = FOCAL();
-  const items = brains.map((b, i) => { const p = project(b.core); return { i, ...p, rpx: 6.4 * F / Math.max(p.depth, 1) }; });
+  const items = brains.map((b, i) => { const p = project(b.core); return { i, ...p, rpx: 6.8 * F / Math.max(p.depth, 1) }; });
   const prio = (it) => it.i === selected ? 2 : it.i === hovered ? 1 : 0;
   items.sort((a, b) => prio(b) - prio(a) || a.depth - b.depth);
   const placed = [];
   for (const it of items) {
     const el = labelEls[it.i];
+    if (activeCategory !== 'all' && DS[it.i].group !== activeCategory) {
+      el.style.visibility = 'hidden';
+      continue;
+    }
     const fs = Math.max(11, Math.min(19, 4300 / Math.max(it.depth, 1))) * uiScale();
     const w = DS[it.i].name.length * fs * .58 + 3.2 * fs, h = 1.6 * fs;
     const x = it.x + it.rpx + 5, y = it.y - h / 2;
@@ -360,7 +438,7 @@ function updateLabels() {
     if (selected < 0) { el.style.visibility = 'hidden'; return; }
     const p = project(brains[selected].branchIdx[a]);
     if (p.depth < 8) { el.style.visibility = 'hidden'; return; }
-    const us = uiScale(), rpx = 3.6 * F / p.depth, w = (BRANCHES[a].name.length * 7.6 + 12) * us, h = 18 * us;
+    const us = uiScale(), rpx = 3.8 * F / p.depth, w = (BRANCHES[a].name.length * 7.6 + 12) * us, h = 18 * us;
     el.style.fontSize = (11 * us).toFixed(1) + 'px';
     let x = p.x + rpx + 4, y = p.y - 9;
     const hit = () => placed.some((r) => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
@@ -372,7 +450,7 @@ function updateLabels() {
   });
 }
 
-// ---------- picking (screen-space, like the original — no raycasting) ----------
+// ---------- picking ----------
 function pick(px, py) {
   camera.getWorldDirection(_dir);
   const F = FOCAL(); let best = -1, bestDepth = Infinity;
@@ -403,7 +481,7 @@ cv.addEventListener('pointerup', (e) => {
   if (!tap) return;
   const n = pick(e.clientX, e.clientY);
   if (n >= 0) select(nodes[n].bi, nodes[n].kind === 'core' ? null : nodes[n]);
-  else if (selected >= 0 && !auto.active) deselect();   // during a tour, empty-space clicks keep the tour framing
+  else if (selected >= 0 && !auto.active) deselect();
 });
 cv.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse' || e.buttons) return;
@@ -421,10 +499,19 @@ cv.addEventListener('pointerleave', () => { hovered = -1; tip.style.opacity = 0;
 const panel = document.getElementById('panel');
 function renderPanel(bi) {
   const d = DS[bi], g = GROUPS[d.group], idx = ORDER.indexOf(d.id), isDone = done.has(d.id);
+  const renderCore = (B) => `
+    <h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
+    <table class="ops core-tbl">
+      ${d.core.map(([concept, detail], j) => `
+        <tr data-item="core-${j}">
+          <td><b>${esc(concept)}</b></td>
+          <td><span class="core-detail">${esc(detail)}</span></td>
+        </tr>`).join('')}
+    </table>`;
   const list = (B) => `<h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
-    <ul class="items" style="--c:${B.color}">${d[B.key].map((x, j) => `<li data-item="${B.key}-${j}">${B.key === 'problems'
-      ? `<a href="https://leetcode.com/problemset/?search=${encodeURIComponent(x)}" target="_blank" rel="noopener">${esc(x)}</a>` : esc(x)}</li>`).join('')}</ul>`;
+    <ul class="items" style="--c:${B.color}">${d[B.key].map((x, j) => `<li data-item="${B.key}-${j}">${esc(x)}</li>`).join('')}</ul>`;
   const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === bi || (auto.loopBi < 0 && STEPS[auto.i]?.bi === bi));
+
   panel.innerHTML = `
     <div class="p-top"><span class="pill" style="--c:${g.color}">${esc(g.name)}</span><span class="lvl">${esc(LEVELS[d.level])}</span>
       <button class="x" data-act="close" aria-label="Close">✕</button></div>
@@ -437,16 +524,16 @@ function renderPanel(bi) {
         ${isLoopingThis && auto.playing ? '❚❚ Looping topic' : '▶ Play in loop'}
       </button>
     </div>
-    <h3 data-sec="ops"><i style="background:${BRANCHES[0].color}"></i>Operations &amp; cost</h3>
-    <table class="ops">${d.ops.map(([o, c], j) => `<tr data-item="ops-${j}"><td>${esc(o)}</td><td><span class="cx ${cxClass(c)}">${esc(c)}</span></td></tr>`).join('')}</table>
+    ${renderCore(BRANCHES[0])}
     ${BRANCHES.slice(1).map(list).join('')}
-    <h3><i style="background:#0f1020"></i>In Python</h3>
+    <h3><i style="background:#0f1020"></i>Code Example</h3>
     <div class="code"><button data-act="copy">Copy</button><pre>${esc(d.py)}</pre></div>
-    <h3><i style="background:#ccc"></i>Connected to</h3>
-    <div class="chips">${d.related.map((r) => { const o = DS[byId[r]]; return `<button data-go="${r}"><i style="background:${GROUPS[o.group].color}"></i>${esc(o.name)}</button>`; }).join('')}</div>
-    <div class="nav"><button data-act="prev">← Prev</button><span>Learning path<br>${idx + 1} of ${ORDER.length}</span><button data-act="next">Next →</button></div>`;
+    <h3><i style="background:#ccc"></i>Related Domains</h3>
+    <div class="chips">${d.related.map((r) => { const o = DS[byId[r]]; if (!o) return ''; return `<button data-go="${r}"><i style="background:${GROUPS[o.group].color}"></i>${esc(o.name)}</button>`; }).join('')}</div>
+    <div class="nav"><button data-act="prev">← Prev</button><span>Topic ${idx + 1} of ${ORDER.length}</span><button data-act="next">Next →</button></div>`;
   panel.scrollTop = 0;
 }
+
 panel.addEventListener('click', async (e) => {
   const go = e.target.closest('[data-go]'); if (go) { select(byId[go.dataset.go]); return; }
   const btn = e.target.closest('[data-act]'); if (!btn) return;
@@ -500,12 +587,24 @@ function deselect() {
     flyTo(controls.target.clone().addScaledVector(dir, 520), controls.target.clone(), 800);
   }
 }
-function goHome() { deselect(); document.body.classList.remove('exploring'); overview(); }
+function goHome() { deselect(); activeCategory = 'all'; updateCategoryUI(); document.body.classList.remove('exploring'); overview(); }
 
 // ---------- list view ----------
 const listEl = document.getElementById('list'), listBtn = document.getElementById('listBtn');
 function renderList() {
-  listEl.innerHTML = Object.entries(GROUPS).map(([gk, g]) => `
+  const groupsToRender = activeCategory === 'all'
+    ? Object.entries(GROUPS)
+    : Object.entries(GROUPS).filter(([k]) => k === activeCategory);
+
+  listEl.innerHTML = `
+    <div style="max-width:1100px; margin:0 auto 24px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span style="font-size:11.5px; font-weight:700; text-transform:uppercase; color:var(--mute); letter-spacing:.06em;">Filter:</span>
+      <button class="cat-pill${activeCategory === 'all' ? ' act' : ''}" data-cat="all">All</button>
+      ${Object.entries(GROUPS).map(([k, g]) => `
+        <button class="cat-pill${activeCategory === k ? ' act' : ''}" data-cat="${k}"><i style="background:${g.color}"></i>${esc(g.name)}</button>
+      `).join('')}
+    </div>
+  ` + groupsToRender.map(([gk, g]) => `
     <div class="lgroup"><h4><i style="background:${g.color}"></i>${esc(g.name)}</h4><div class="cards">
     ${DS.filter((d) => d.group === gk).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id)).map((d) => `
       <button class="card" data-go="${d.id}">${done.has(d.id) ? '<span class="done">✓</span>' : ''}
@@ -515,10 +614,24 @@ function renderList() {
 function openList() { renderList(); listEl.classList.add('open'); listBtn.textContent = '◎ 3D view'; tip.style.opacity = 0; }
 function closeList() { listEl.classList.remove('open'); listBtn.textContent = '☰ List view'; }
 listBtn.addEventListener('click', () => listEl.classList.contains('open') ? closeList() : openList());
-listEl.addEventListener('click', (e) => { const c = e.target.closest('[data-go]'); if (c) select(byId[c.dataset.go]); });
+listEl.addEventListener('click', (e) => {
+  const catBtn = e.target.closest('.cat-pill');
+  if (catBtn) { setCategory(catBtn.dataset.cat, false); return; }
+  const c = e.target.closest('[data-go]');
+  if (c) select(byId[c.dataset.go]);
+});
 
 // ---------- hero & misc ----------
-document.getElementById('legend').innerHTML = Object.values(GROUPS).map((g) => `<span><i style="background:${g.color}"></i>${esc(g.name)}</span>`).join('');
+renderCategoryButtons();
+document.getElementById('legend').addEventListener('click', (e) => {
+  const b = e.target.closest('.cat-pill');
+  if (b) setCategory(b.dataset.cat);
+});
+document.getElementById('catBar').addEventListener('click', (e) => {
+  const b = e.target.closest('.cat-pill');
+  if (b) setCategory(b.dataset.cat);
+});
+
 document.getElementById('startBtn').addEventListener('click', () => select(byId[ORDER[0]]));
 document.getElementById('exploreBtn').addEventListener('click', () => { document.body.classList.add('exploring'); explore(); });
 document.getElementById('brand').addEventListener('click', goHome);
@@ -545,7 +658,6 @@ addEventListener('resize', () => {
 function fromHash() { const id = location.hash.slice(1); if (id && byId[id] !== undefined && byId[id] !== selected) select(byId[id]); }
 addEventListener('hashchange', fromHash);
 
-
 // ---------- search with autocomplete ----------
 const qEl = document.getElementById('q'), suggEl = document.getElementById('sugg'), searchBox = document.getElementById('search');
 const INDEX = nodes.map((nd, n) => {
@@ -555,13 +667,21 @@ const INDEX = nodes.map((nd, n) => {
   if (nd.kind === 'branch') return { n, kind: 1, title: `${B.name}`, sub: d.name, color: B.color };
   return { n, kind: 2, title: nd.text, sub: `${d.name} · ${B.name}`, color: B.color };
 });
-// aliases so common words find the right structure
-const ALIAS = { 'hash-map': 'dictionary dict hashtable hash table map', 'hash-set': 'set', 'heap': 'priority queue pq min-heap max-heap heapq',
-  'union-find': 'disjoint set dsu', 'trie': 'prefix tree', 'grid': 'matrix 2d board', 'bst': 'binary search tree', 'fenwick-tree': 'binary indexed tree bit',
-  'lru-cache': 'cache ordereddict', 'deque': 'double ended queue', 'balanced-bst': 'avl red black treemap sortedlist', 'array': 'list',
-  'dynamic-programming': 'dp memoization tabulation knapsack', 'binary-search': 'bisect bsearch lower bound upper bound',
-  'greedy': 'interval scheduling greedy choice', 'backtracking': 'dfs state space tree pruning permutations',
-  'divide-and-conquer': 'd&c merge sort quick sort master theorem' };
+
+const ALIAS = {
+  'dsa': 'data structures algorithms dsa sorting binary search trees graphs big o leetcode hash maps heaps stacks queues',
+  'architecture': 'cpu hardware silicon registers cache assembly instruction set risc-v x86 alu clock memory hierarchy',
+  'os': 'operating system processes threads virtual memory scheduling kernel linux syscalls deadlocks concurrency',
+  'networking': 'tcp ip sockets udp http dns routing packet switching packets osi layers protocols latency',
+  'databases': 'sql acid transactions b-trees indexing nosql relational joins sharding wal replication storage',
+  'distributed-systems': 'cap theorem consensus raft paxos replication split brain distributed fault tolerance event driven',
+  'languages-compilers': 'ast parser interpreter compiler bytecode jit garbage collection type systems grammar lexer',
+  'software-engineering': 'solid clean code design patterns modularity testing refactoring ci cd agile architectural patterns',
+  'web-cloud': 'browser dom rest graphql microservices serverless containers docker kubernetes cloud api cdn frontend backend',
+  'ai-ml': 'machine learning neural networks deep learning transformers llms gradient descent backpropagation training models',
+  'cybersecurity': 'cryptography hashing encryption rsa zero trust authentication ssl tls sql injection buffer overflow security',
+  'theory-computation': 'turing machines p vs np decidability automata computability halting problem complexity classes formal grammars'
+};
 INDEX.forEach((it) => { if (it.kind === 0) it.alias = ALIAS[DS[nodes[it.n].bi].id] || ''; });
 const fold = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 INDEX.forEach((it) => { it.ft = fold(it.title); it.fs = fold(it.sub); it.fa = fold(it.alias || ''); });
@@ -597,7 +717,7 @@ function runSearch() {
   active = 0;
   suggEl.innerHTML = results.length ? results.map((it, i) => `<div class="sg${i === 0 ? ' act' : ''}" role="option" data-i="${i}">
       <i class="${it.kind === 0 ? 'core' : ''}" style="background:${it.color}"></i>
-      <div><div class="t">${hl(it.title, words)}</div><div class="s">${it.kind === 0 ? 'Structure · ' : ''}${esc(it.sub)}</div></div></div>`).join('')
+      <div><div class="t">${hl(it.title, words)}</div><div class="s">${it.kind === 0 ? 'Topic · ' : ''}${esc(it.sub)}</div></div></div>`).join('')
     : `<div class="sg-empty">No matches for “${esc(qEl.value.trim())}”</div>`;
   suggEl.classList.add('open'); qEl.setAttribute('aria-expanded', 'true');
 }
@@ -626,17 +746,16 @@ suggEl.addEventListener('pointerdown', (e) => { const el = e.target.closest('.sg
 suggEl.addEventListener('pointermove', (e) => { const el = e.target.closest('.sg'); if (el && +el.dataset.i !== active) setActive(+el.dataset.i); });
 qEl.addEventListener('blur', () => setTimeout(closeSugg, 120));
 
-
 // ---------- autoplay: a slow, film-like tour ----------
 const STEPS = [];
 ORDER.forEach((id) => {
   const bi = byId[id];
   STEPS.push({ bi, br: -1, dur: 6800 });
-  BRANCHES.forEach((B, a) => STEPS.push({ bi, br: a, dur: 3000 + 300 * Math.min(DS[bi][B.key].length, 6) }));
+  BRANCHES.forEach((B, a) => STEPS.push({ bi, br: a, dur: 3200 + 300 * Math.min(DS[bi][B.key].length, 6) }));
 });
 const SPEEDS = [.5, 1, 1.5, 2];
 const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true, loop: 'off', loopBi: -1 };
-try { auto.showPanel = localStorage.getItem('dsmap-tour-panel') !== 'off'; auto.showCaps = localStorage.getItem('dsmap-tour-caps') !== 'off'; } catch (e) {}
+try { auto.showPanel = localStorage.getItem('csmap-tour-panel') !== 'off'; auto.showCaps = localStorage.getItem('csmap-tour-caps') !== 'off'; } catch (e) {}
 const tourPanel = () => isWide() && auto.showPanel;
 const capEl = document.getElementById('caption'), playerEl = document.getElementById('player');
 const ppBtn = playerEl.querySelector('[data-p="toggle"]'), spdBtn = playerEl.querySelector('[data-p="speed"]');
@@ -756,20 +875,20 @@ function pauseAuto() { if (!auto.active) return; auto.playing = false; syncPlaye
 function toggleAuto() {
   if (!auto.active) return startAuto();
   auto.playing = !auto.playing;
-  if (auto.playing && selected !== STEPS[auto.i].bi) goStep(auto.i);   // user wandered off: pick up where we were
+  if (auto.playing && selected !== STEPS[auto.i].bi) goStep(auto.i);
   syncPlayer();
   if (selected >= 0) renderPanel(selected);
 }
 function setTourPanel(v) {
-  auto.showPanel = v; try { localStorage.setItem('dsmap-tour-panel', v ? 'on' : 'off'); } catch (e) {}
+  auto.showPanel = v; try { localStorage.setItem('csmap-tour-panel', v ? 'on' : 'off'); } catch (e) {}
   syncPlayer();
   if (!auto.active || selected < 0) return;
   if (tourPanel()) { panel.classList.add('open'); document.body.classList.add('panel-open'); }
   else { panel.classList.remove('open'); document.body.classList.remove('panel-open'); clearFlash(); }
-  focusCam(selected, 1400, !tourPanel());          // re-frame: centred when the panel is hidden
+  focusCam(selected, 1400, !tourPanel());
 }
 function setTourCaps(v) {
-  auto.showCaps = v; try { localStorage.setItem('dsmap-tour-caps', v ? 'on' : 'off'); } catch (e) {}
+  auto.showCaps = v; try { localStorage.setItem('csmap-tour-caps', v ? 'on' : 'off'); } catch (e) {}
   syncPlayer();
 }
 function syncPlayBtn() {
@@ -813,7 +932,7 @@ function tickAuto(dt) {
         goStep(auto.i + 1);
       }
     }
-    if (!tween && !dragging) {                       // slow cinematic orbit around the current cluster
+    if (!tween && !dragging) {
       const off = camera.position.clone().sub(controls.target).applyAxisAngle(Y, dt * .05 * auto.speed);
       camera.position.copy(controls.target).add(off);
     }
@@ -876,7 +995,7 @@ function frame(now) {
     camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e);
     if (k >= 1) tween = null;
   }
-  if (follow >= 0) {                     // keep the selected cluster framed as it drifts
+  if (follow >= 0) {
     const c = centerOf(follow, _v); const dlt = c.clone().sub(followLast); followLast.copy(c);
     if (!dragging) {
       camera.position.add(dlt); controls.target.add(dlt);

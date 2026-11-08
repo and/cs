@@ -1,472 +1,605 @@
 export const GROUPS = {
-  linear:     { name: 'Linear',        color: '#3B6FE0' },
-  hashing:    { name: 'Hashing',       color: '#E0703B' },
-  trees:      { name: 'Trees & heaps', color: '#2E9E6A' },
-  graphs:     { name: 'Graphs',        color: '#8A4FD8' },
-  range:      { name: 'Range queries', color: '#D9447A' },
-  algorithms: { name: 'Algorithms',    color: '#D97706' },
+  foundations: { name: 'Foundations',        color: '#3B6FE0' },
+  systems:     { name: 'Systems & Hardware', color: '#0D9488' },
+  data:        { name: 'Data & Scale',       color: '#8A4FD8' },
+  software:    { name: 'Software & Web',     color: '#E0703B' },
+  ai_sec:      { name: 'AI & Security',      color: '#D9447A' },
 };
 
 export const BRANCHES = [
-  { key: 'ops',      name: 'Operations',        color: '#5B8DEF', leaf: '#BCD0F8' },
-  { key: 'use',      name: 'Use it when',       color: '#34A77A', leaf: '#B7E2CD' },
-  { key: 'patterns', name: 'Patterns',          color: '#9A6BE0', leaf: '#D8C8F4' },
-  { key: 'problems', name: 'Practice problems', color: '#EE8A3C', leaf: '#F9D4B2' },
-  { key: 'pitfalls', name: 'Pitfalls',          color: '#E05561', leaf: '#F5C3C8' },
+  { key: 'core',     name: 'Core concepts',         color: '#3B6FE0', leaf: '#BCD0F8' },
+  { key: 'why',      name: 'Why it matters',         color: '#0D9488', leaf: '#99F6E4' },
+  { key: 'patterns', name: 'Techniques & patterns',  color: '#8A4FD8', leaf: '#DDD6FE' },
+  { key: 'examples', name: 'Milestone systems',      color: '#E0703B', leaf: '#FED7AA' },
+  { key: 'pitfalls', name: 'Beginner pitfalls',      color: '#E05561', leaf: '#F5C3C8' },
 ];
 
-export const LEVELS = { core: 'Must know', good: 'Good to know', adv: 'Advanced' };
+export const LEVELS = { core: 'Fundamental', good: 'Core Major', adv: 'Advanced Domain' };
 
-export const ORDER = ['array','string','hash-map','hash-set','linked-list','stack','queue','deque',
-  'binary-tree','bst','heap','grid','graph','trie','union-find','lru-cache','balanced-bst','segment-tree','fenwick-tree',
-  'binary-search','divide-and-conquer','greedy','backtracking','dynamic-programming'];
+export const ORDER = [
+  'dsa',
+  'architecture',
+  'os',
+  'networking',
+  'databases',
+  'distributed-systems',
+  'languages-compilers',
+  'software-engineering',
+  'web-cloud',
+  'ai-ml',
+  'cybersecurity',
+  'theory-computation',
+];
 
 export const DS = [
 {
-  id: 'array', name: 'Array', group: 'linear', level: 'core',
-  one: 'A row of numbered boxes in one continuous block of memory. You can jump to any box by its index instantly.',
-  ops: [['Access by index','O(1)'],['Search (unsorted)','O(n)'],['Search (sorted, binary search)','O(log n)'],['Append at end','O(1) amortized'],['Insert / delete in middle','O(n)'],['Remove last','O(1)']],
-  use: ['You need fast access by position','Data is mostly appended, rarely inserted mid-way','You iterate a lot (cache-friendly)'],
-  patterns: ['Two pointers','Sliding window','Prefix sums','Binary search','Sort first, then scan'],
-  problems: ['Best Time to Buy and Sell Stock','Maximum Subarray','Product of Array Except Self','Merge Intervals','Container With Most Water','3Sum'],
-  pitfalls: ['Off-by-one errors at the boundaries','Inserting at the front inside a loop is O(n²)','Changing a list while looping over it'],
-  py: `nums = [3, 1, 4]
-nums.append(1)       # O(1) amortized
-nums[0]              # O(1)
-nums.insert(0, 9)    # O(n): shifts everything right
-nums.pop()           # O(1)`,
-  related: ['string','hash-map','grid','stack','heap','fenwick-tree'],
+  id: 'dsa', name: 'Data Structures & Algorithms', group: 'foundations', level: 'core',
+  one: 'The foundational toolbox of computing: organizing data in memory and designing step-by-step procedures to process it with minimum time and memory.',
+  core: [
+    ['Linear Layouts', 'Arrays, Strings, Linked Lists, Stacks, Queues'],
+    ['Hash Tables', 'O(1) key-value lookup and set membership'],
+    ['Hierarchical Trees', 'Binary Search Trees, Heaps, Tries, Balanced Trees'],
+    ['Graph Networks', 'Vertices and edges modeling real-world connections'],
+    ['Big-O Complexity', 'Time and space scaling as inputs grow'],
+  ],
+  why: [
+    'Enables software to scale smoothly from 10 items to 10 billion items',
+    'Directly dictates server costs, memory footprint, and mobile battery life',
+    'Forms the shared technical vocabulary across all software engineering',
+  ],
+  patterns: [
+    'Two pointers and sliding window on contiguous sequences',
+    'Divide and conquer (Binary search, Merge sort, Quick sort)',
+    'Dynamic programming and memoization for overlapping subproblems',
+    'Breadth-first search (BFS) for shortest path; Depth-first search (DFS) for exploration',
+    'Greedy choice property with heap/priority queue tracking',
+  ],
+  examples: [
+    'Git commit trees (Directed Acyclic Graphs)',
+    'Database B-Trees for disk indexing',
+    'Search engine autocomplete using Prefix Tries',
+    'Operating system process schedulers using Priority Heaps',
+    'Router packet queues and browser history stacks',
+  ],
+  pitfalls: [
+    'Premature optimization before measuring bottlenecks',
+    'Focusing only on time complexity while ignoring high memory overhead',
+    'Assuming operations are O(1) without understanding internal costs (e.g. string concatenation)',
+  ],
+  py: `# DSA in action: fast lookup with a Hash Map & sorting
+scores = {'alice': 95, 'bob': 82, 'charlie': 91}
+scores['david'] = 88                 # O(1) average insert
+ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True) # O(n log n)
+top_student, top_score = ranked[0]
+print(f"Top student: {top_student} ({top_score})")`,
+  related: ['architecture','os','languages-compilers','theory-computation'],
 },
-{
-  id: 'string', name: 'String', group: 'linear', level: 'core',
-  one: 'An array of characters. In Python it is immutable, so every "change" actually builds a new string.',
-  ops: [['Access a character','O(1)'],['Slice / substring','O(k)'],['Concatenate two strings','O(n + m)'],['Compare','O(n)'],['Build with "".join(parts)','O(total length)']],
-  use: ['Processing text','Palindrome and anagram checks','Matching patterns in text'],
-  patterns: ['Two pointers from both ends','Sliding window over characters','Character frequency counts','Collect pieces in a list, then join'],
-  problems: ['Valid Anagram','Valid Palindrome','Longest Substring Without Repeating Characters','Group Anagrams','Longest Palindromic Substring','Minimum Window Substring'],
-  pitfalls: ['s += c in a loop can become O(n²)','Forgetting upper/lower case and non-letters','Assuming ASCII when input may be Unicode'],
-  py: `s = "racecar"
-s[::-1] == s           # palindrome check
-parts = []
-for ch in s:
-    parts.append(ch.upper())
-"".join(parts)         # O(n), better than += in a loop`,
-  related: ['array','hash-map','trie'],
-},
-{
-  id: 'hash-map', name: 'Hash Map', group: 'hashing', level: 'core',
-  one: 'Stores key → value pairs. A hash function turns each key into a slot number, so a lookup takes about the same time however big the map gets.',
-  ops: [['Get / put / delete (average)','O(1)'],['Same, worst case (many collisions)','O(n)'],['Iterate everything','O(n)'],['Find smallest key','O(n): not ordered']],
-  use: ['Counting things','Remembering what you have already seen','Looking up records by ID','Turning an O(n²) search into O(n)'],
-  patterns: ['Frequency count','Complement lookup (Two Sum)','Group by a computed key','Prefix sum + map','Index of last occurrence'],
-  problems: ['Two Sum','Group Anagrams','Top K Frequent Elements','Subarray Sum Equals K','Longest Consecutive Sequence','Contains Duplicate'],
-  pitfalls: ['Keys must be hashable: use tuples, not lists','Changing an object after using it as a key','Relying on key order in languages that do not keep it'],
-  py: `from collections import Counter
-counts = Counter("banana")    # {'a': 3, 'n': 2, 'b': 1}
 
-seen = {}                      # Two Sum
-for i, x in enumerate(nums):
-    if target - x in seen:
-        return [seen[target - x], i]
-    seen[x] = i`,
-  related: ['hash-set','array','lru-cache','string','graph'],
-},
 {
-  id: 'hash-set', name: 'Hash Set', group: 'hashing', level: 'core',
-  one: 'A hash map with only keys. It answers one question very fast: "have I seen this before?"',
-  ops: [['Add / remove / contains (average)','O(1)'],['Union / intersection','O(n + m)'],['Iterate','O(n)']],
-  use: ['Removing duplicates','Tracking visited nodes in a search','Fast membership checks'],
-  patterns: ['Deduplicate','Visited set','Set intersection','Only start counting at the start of a run'],
-  problems: ['Contains Duplicate','Longest Consecutive Sequence','Happy Number','Intersection of Two Arrays','Valid Sudoku'],
-  pitfalls: ['Sets have no order','Writing x in some_list (O(n)) when you meant a set (O(1))'],
-  py: `seen = set()
-for x in nums:
-    if x in seen:
-        return True      # duplicate found
-    seen.add(x)
-return False`,
-  related: ['hash-map','graph'],
+  id: 'architecture', name: 'Computer Architecture & Hardware', group: 'systems', level: 'core',
+  one: 'How physical silicon translates electricity into logic: understanding CPUs, registers, memory hierarchies, arithmetic logic units, and machine instructions.',
+  core: [
+    ['CPU & ALU', 'Arithmetic logic unit executing billions of cycles per second'],
+    ['Registers & Clock', 'Fastest on-chip storage running at gigahertz speeds'],
+    ['Memory Hierarchy', 'L1/L2/L3 on-die caches → RAM → SSD NVMe storage'],
+    ['Instruction Set (ISA)', 'x86-64, ARM64, and RISC-V machine instruction standards'],
+    ['Pipelining & Branching', 'Predictive speculative execution and instruction pipelines'],
+  ],
+  why: [
+    'Hardware limits define what software can physically accomplish',
+    'Cache-aware code (spatial and temporal locality) runs up to 100x faster than cache-thrashing code',
+    'Drives the revolution in modern computing from mobile chips to GPUs and TPUs',
+  ],
+  patterns: [
+    'Spatial locality: access sequential memory blocks together',
+    'Temporal locality: reuse recently accessed data while still in cache',
+    'Branch prediction friendliness: avoid unpredictable nested conditionals',
+    'SIMD parallelism: single instruction manipulating multiple data vectors',
+  ],
+  examples: [
+    'Apple Silicon (M-series) unified memory architecture',
+    'NVIDIA GPU tensor cores for massive parallel matrix math',
+    'Modern multi-core processors with hyper-threading',
+    'Row-major vs column-major matrix traversal performance difference',
+  ],
+  pitfalls: [
+    'Treating memory access as uniform cost (RAM access is ~200x slower than L1 cache)',
+    'Ignoring false sharing in multi-threaded programs on the same cache line',
+    'Believing high-level code translates 1-to-1 into machine instructions without compiler optimization',
+  ],
+  py: `# Cache locality demonstration: row traversal is fast
+import time
+matrix = [[1] * 1000 for _ in range(1000)]
+# Row-major traversal (sequential memory, cache-friendly):
+start = time.perf_counter()
+total = sum(matrix[r][c] for r in range(1000) for c in range(1000))
+print(f"Row-major sum: {total} in {(time.perf_counter()-start)*1000:.2f}ms")`,
+  related: ['dsa','os','languages-compilers'],
 },
-{
-  id: 'linked-list', name: 'Linked List', group: 'linear', level: 'core',
-  one: 'A chain of nodes. Each holds a value and a pointer to the next node. Easy to splice, slow to index.',
-  ops: [['Access the k-th item','O(n)'],['Insert / delete at head','O(1)'],['Insert / delete after a known node','O(1)'],['Search','O(n)'],['Append (with a tail pointer)','O(1)']],
-  use: ['Many insertions and removals in the middle','Building other structures (LRU cache, queues)','Pointer-manipulation problems'],
-  patterns: ['Dummy head node','Fast and slow pointers','Reverse in place','Merge two sorted lists'],
-  problems: ['Reverse Linked List','Linked List Cycle','Merge Two Sorted Lists','Remove Nth Node From End of List','Reorder List','Merge k Sorted Lists'],
-  pitfalls: ['Losing the rest of the list when you re-point next','Not checking for None before node.next.next','Forgetting to return the new head'],
-  py: `class Node:
-    def __init__(self, val, next=None):
-        self.val, self.next = val, next
 
-def reverse(head):
-    prev = None
-    while head:
-        head.next, prev, head = prev, head, head.next
-    return prev`,
-  related: ['stack','queue','deque','lru-cache'],
-},
 {
-  id: 'stack', name: 'Stack', group: 'linear', level: 'core',
-  one: 'Last in, first out, like a pile of plates. You only ever touch the top.',
-  ops: [['Push','O(1)'],['Pop','O(1)'],['Peek at top','O(1)'],['Search','O(n)']],
-  use: ['Undo / back button','Matching brackets','Evaluating expressions','Replacing recursion with a loop (DFS)'],
-  patterns: ['Bracket matching','Monotonic stack (next greater element)','Iterative DFS','Min stack (track the min alongside)'],
-  problems: ['Valid Parentheses','Min Stack','Daily Temperatures','Evaluate Reverse Polish Notation','Decode String','Largest Rectangle in Histogram'],
-  pitfalls: ['Popping from an empty stack','Forgetting leftovers at the end (unmatched items)'],
-  py: `pairs = {')': '(', ']': '[', '}': '{'}
-stack = []
-for ch in s:
-    if ch in "([{":
-        stack.append(ch)
-    elif not stack or stack.pop() != pairs[ch]:
-        return False
-return not stack`,
-  related: ['array','linked-list','queue','graph','binary-tree'],
-},
-{
-  id: 'queue', name: 'Queue', group: 'linear', level: 'core',
-  one: 'First in, first out, like a checkout line. Add at the back, serve from the front.',
-  ops: [['Enqueue (append)','O(1)'],['Dequeue (popleft on deque)','O(1)'],['Peek at front','O(1)'],['list.pop(0): avoid','O(n)']],
-  use: ['Breadth-first search','Processing tasks in arrival order','Visiting a tree level by level'],
-  patterns: ['BFS','Level-order traversal','Multi-source BFS','Shortest path in an unweighted graph'],
-  problems: ['Binary Tree Level Order Traversal','Rotting Oranges','Number of Islands','Implement Queue using Stacks','Open the Lock'],
-  pitfalls: ['Using list.pop(0), which is O(n) each time','Marking visited when popping instead of when pushing (duplicates)'],
-  py: `from collections import deque
-q, seen = deque([start]), {start}
-while q:
-    node = q.popleft()
-    for nb in graph[node]:
-        if nb not in seen:
-            seen.add(nb)
-            q.append(nb)`,
-  related: ['deque','stack','graph','binary-tree','grid'],
-},
-{
-  id: 'deque', name: 'Deque', group: 'linear', level: 'good',
-  one: 'A double-ended queue: add or remove at either end in O(1). A queue and a stack in one.',
-  ops: [['Append / pop at either end','O(1)'],['Access by index in the middle','O(n)'],['Rotate by k','O(k)']],
-  use: ['Sliding window maximum / minimum','You need both stack and queue behaviour','Checking from both ends at once'],
-  patterns: ['Monotonic deque','0-1 BFS','Sliding window'],
-  problems: ['Sliding Window Maximum','Design Circular Deque','Shortest Subarray with Sum at Least K','Jump Game VI'],
-  pitfalls: ['Storing values instead of indices in a monotonic deque','Forgetting to evict items that fell out of the window'],
-  py: `from collections import deque
-dq, out = deque(), []        # indices, values decreasing
-for i, x in enumerate(nums):
-    while dq and nums[dq[-1]] <= x:
-        dq.pop()
-    dq.append(i)
-    if dq[0] <= i - k:
-        dq.popleft()
-    if i >= k - 1:
-        out.append(nums[dq[0]])`,
-  related: ['queue','stack','linked-list'],
-},
-{
-  id: 'binary-tree', name: 'Binary Tree', group: 'trees', level: 'core',
-  one: 'Each node has up to two children. Most tree problems come down to: "what do I need back from my left and right subtrees?"',
-  ops: [['Visit every node','O(n)'],['Search (no ordering)','O(n)'],['Height','O(n)'],['Recursion stack space','O(h)']],
-  use: ['Hierarchies','Expression trees','As the base for BSTs and heaps'],
-  patterns: ['DFS: pre-, in-, post-order','BFS: level order','Return info up from children','Pass state down (e.g. path sums)'],
-  problems: ['Maximum Depth of Binary Tree','Invert Binary Tree','Same Tree','Diameter of Binary Tree','Lowest Common Ancestor of a Binary Tree','Binary Tree Maximum Path Sum'],
-  pitfalls: ['Missing the base case (node is None)','Mixing up height and depth','Hitting the recursion limit on very skewed trees'],
-  py: `def max_depth(node):
-    if not node:
-        return 0
-    return 1 + max(max_depth(node.left),
-                   max_depth(node.right))`,
-  related: ['bst','heap','trie','queue','stack','graph'],
-},
-{
-  id: 'bst', name: 'Binary Search Tree', group: 'trees', level: 'core',
-  one: 'A binary tree where everything left < node < everything right. That ordering lets you throw away half the tree at every step, as long as it stays balanced.',
-  ops: [['Search / insert / delete (balanced)','O(log n)'],['Same, worst case (skewed)','O(n)'],['In-order traversal (gives sorted order)','O(n)'],['Min / max','O(h)']],
-  use: ['Keeping data sorted while inserting','Range queries','Finding the nearest smaller / larger value'],
-  patterns: ['In-order traversal = sorted order','Validate with min/max bounds','Walk left or right by comparing'],
-  problems: ['Validate Binary Search Tree','Kth Smallest Element in a BST','Lowest Common Ancestor of a BST','Insert into a Binary Search Tree','Convert Sorted Array to Binary Search Tree'],
-  pitfalls: ['Only checking parent vs child, not the whole allowed range','Inserting already-sorted data makes a linked list (O(n))'],
-  py: `def valid(node, lo=float('-inf'), hi=float('inf')):
-    if not node:
-        return True
-    if not lo < node.val < hi:
-        return False
-    return (valid(node.left, lo, node.val) and
-            valid(node.right, node.val, hi))`,
-  related: ['binary-tree','balanced-bst','heap'],
-},
-{
-  id: 'balanced-bst', name: 'Balanced BST', group: 'trees', level: 'adv',
-  one: 'A BST that re-balances itself (AVL, red-black) so its height stays O(log n). You rarely write one; you use one from a library.',
-  ops: [['Search / insert / delete (guaranteed)','O(log n)'],['Ordered iteration','O(n)'],['Floor / ceiling lookup','O(log n)']],
-  use: ['You need a sorted map or set (Java TreeMap, C++ std::map)','Sliding window that needs order (median, k-th)','Checking for overlapping bookings'],
-  patterns: ['Python: sortedcontainers.SortedList','Rotations keep the height small (know the idea)'],
-  problems: ['My Calendar I','Contains Duplicate III','Sliding Window Median','Count of Smaller Numbers After Self'],
-  pitfalls: ['Python has no built-in one','Rarely needed to code rotations from scratch'],
-  py: `from sortedcontainers import SortedList
-sl = SortedList([5, 1, 3])
-sl.add(2)              # O(log n)
-sl.bisect_left(3)      # index of first item >= 3
-sl[0], sl[-1]          # min, max`,
-  related: ['bst','heap','segment-tree'],
-},
-{
-  id: 'heap', name: 'Heap / Priority Queue', group: 'trees', level: 'core',
-  one: 'A tree, stored in an array, where every parent is smaller than its children. The smallest item is always on top.',
-  ops: [['Peek at min','O(1)'],['Push','O(log n)'],['Pop min','O(log n)'],['Build from a list (heapify)','O(n)'],['Find an arbitrary item','O(n)']],
-  use: ['You keep needing the next smallest / largest','Top K problems','Scheduling','Dijkstra shortest paths'],
-  patterns: ['Top K with a heap of size K','Merge K sorted lists','Two heaps for a running median','Max-heap by negating values'],
-  problems: ['Kth Largest Element in an Array','Top K Frequent Elements','Merge k Sorted Lists','Find Median from Data Stream','K Closest Points to Origin','Task Scheduler'],
-  pitfalls: ['Python heapq is a min-heap only','A heap is not sorted: only the top is guaranteed','Tuples are compared item by item, so ties look at the next field'],
-  py: `import heapq
-h = []
-for x in nums:
-    heapq.heappush(h, x)
-    if len(h) > k:
-        heapq.heappop(h)   # drop the smallest
-return h[0]                # k-th largest`,
-  related: ['array','binary-tree','graph','balanced-bst'],
-},
-{
-  id: 'grid', name: 'Grid / Matrix', group: 'graphs', level: 'core',
-  one: 'A 2D array. Treat each cell as a graph node with up to 4 neighbours and most grid problems turn into BFS or DFS.',
-  ops: [['Access a cell','O(1)'],['Visit every cell','O(rows × cols)'],['List a cell\'s neighbours','O(1)']],
-  use: ['Maps, boards, images','Dynamic programming tables','Flood fill'],
-  patterns: ['Directions array','Flood fill with DFS / BFS','Multi-source BFS','DP across rows and columns'],
-  problems: ['Number of Islands','Rotting Oranges','Set Matrix Zeroes','Spiral Matrix','Word Search','Unique Paths'],
-  pitfalls: ['Mixing up rows and columns','Indexing before checking bounds','[[0]*n]*m makes every row the same list'],
-  py: `grid = [[0] * cols for _ in range(rows)]  # not [[0]*cols]*rows
-for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-    r2, c2 = r + dr, c + dc
-    if 0 <= r2 < rows and 0 <= c2 < cols:
-        ...`,
-  related: ['array','graph','queue'],
-},
-{
-  id: 'graph', name: 'Graph', group: 'graphs', level: 'core',
-  one: 'Things (nodes) and connections (edges). Maps, networks, dependencies, grids: many problems are graphs in disguise.',
-  ops: [['BFS / DFS','O(V + E)'],['Adjacency list space','O(V + E)'],['Adjacency matrix space','O(V²)'],['Is there an edge? (matrix)','O(1)'],['Dijkstra with a heap','O((V + E) log V)']],
-  use: ['Networks and routes','Dependencies and ordering','Finding connected regions','Shortest paths'],
-  patterns: ['BFS for shortest path (unweighted)','DFS for connectivity','Topological sort','Dijkstra (weighted)','Cycle detection'],
-  problems: ['Number of Islands','Clone Graph','Course Schedule','Pacific Atlantic Water Flow','Network Delay Time','Word Ladder'],
-  pitfalls: ['No visited set means infinite loops','Treating directed edges as undirected (or the reverse)','Disconnected parts: loop over every node'],
-  py: `from collections import defaultdict
-g = defaultdict(list)
-for a, b in edges:
-    g[a].append(b)
-    g[b].append(a)
+  id: 'os', name: 'Operating Systems', group: 'systems', level: 'core',
+  one: 'The master software that manages computer hardware and coordinates running programs: processes, threads, virtual memory, file systems, and device drivers.',
+  core: [
+    ['Kernel vs User Mode', 'Privileged hardware access protected by system calls (syscalls)'],
+    ['Processes & Threads', 'Isolated address spaces vs shared-memory lightweight execution units'],
+    ['CPU Scheduling', 'Preemptive multitasking, round-robin, and CFS priority queues'],
+    ['Virtual Memory', 'Page tables mapping virtual memory pages to physical RAM frames'],
+    ['Concurrency Primitives', 'Mutexes, semaphores, atomic operations, and lock-free structures'],
+  ],
+  why: [
+    'Prevents programs from crashing each other or stealing private data',
+    'Allows hundreds of apps to share limited CPU cores and physical memory concurrently',
+    'Provides the standard POSIX and OS APIs every runtime, database, and backend relies on',
+  ],
+  patterns: [
+    'Avoid deadlocks: acquire locks in a globally consistent order',
+    'Asynchronous I/O and event loops (epoll/kqueue) over spawning thread-per-connection',
+    'Memory-mapped files (mmap) for zero-copy file processing',
+    'Copy-on-Write (COW) for lightweight process forking',
+  ],
+  examples: [
+    'Linux kernel powering servers, Android phones, and supercomputers',
+    'macOS Darwin kernel based on XNU and BSD',
+    'Systemd and Docker container cgroups / namespaces',
+    'Git using mmap for fast object database indexing',
+  ],
+  pitfalls: [
+    'Race conditions: modifying shared variables across threads without synchronization',
+    'Thread overhead: spawning 10,000 OS threads exhausts system memory and scheduler capacity',
+    'Confusing concurrency (dealing with lots of things) with parallelism (doing lots of things at once)',
+  ],
+  py: `# Concurrency with threads and mutual exclusion locks
+import threading
 
-def dfs(u, seen):
-    seen.add(u)
-    for v in g[u]:
-        if v not in seen:
-            dfs(v, seen)`,
-  related: ['hash-map','queue','stack','heap','union-find','grid','binary-tree'],
-},
-{
-  id: 'trie', name: 'Trie', group: 'trees', level: 'good',
-  one: 'A tree of characters. Each path from the root spells a prefix, so words that start the same share nodes.',
-  ops: [['Insert a word of length L','O(L)'],['Search a word','O(L)'],['Check a prefix','O(L)'],['Space','O(total characters)']],
-  use: ['Autocomplete','Prefix search','Word games on a board','Spell checking'],
-  patterns: ['Node = dict of children + end flag','Trie + DFS on a board','Count words through each prefix'],
-  problems: ['Implement Trie (Prefix Tree)','Design Add and Search Words Data Structure','Word Search II','Replace Words','Longest Common Prefix'],
-  pitfalls: ['Forgetting the end-of-word marker','High memory use with many words'],
-  py: `class Trie:
-    def __init__(self):
-        self.root = {}
-    def insert(self, word):
-        node = self.root
-        for ch in word:
-            node = node.setdefault(ch, {})
-        node['$'] = True     # end of word`,
-  related: ['binary-tree','string','hash-map'],
-},
-{
-  id: 'union-find', name: 'Union-Find', group: 'graphs', level: 'good',
-  one: 'Tracks which items belong to the same group. Two moves: find (which group is this in?) and union (merge two groups).',
-  ops: [['Find (with optimisations)','O(α(n)) ≈ O(1)'],['Union (with optimisations)','O(α(n)) ≈ O(1)'],['Without optimisations','O(n)']],
-  use: ['Counting connected components','Detecting a cycle in an undirected graph','Kruskal minimum spanning tree','Merging accounts or equal items'],
-  patterns: ['Path compression','Union by rank / size','Count components as unions succeed'],
-  problems: ['Number of Connected Components in an Undirected Graph','Redundant Connection','Accounts Merge','Graph Valid Tree','Number of Provinces'],
-  pitfalls: ['Skipping path compression','Comparing the items instead of their roots'],
-  py: `parent = list(range(n))
-def find(x):
-    while parent[x] != x:
-        parent[x] = parent[parent[x]]   # path compression
-        x = parent[x]
-    return x
-def union(a, b):
-    ra, rb = find(a), find(b)
-    if ra == rb:
-        return False                    # already joined
-    parent[ra] = rb
-    return True`,
-  related: ['graph','array'],
-},
-{
-  id: 'lru-cache', name: 'LRU Cache', group: 'hashing', level: 'good',
-  one: 'A hash map plus a doubly linked list. The map finds items in O(1); the list remembers which item was used least recently.',
-  ops: [['Get','O(1)'],['Put','O(1)'],['Evict least recently used','O(1)']],
-  use: ['Caching with limited memory','The classic "design a data structure" system problem'],
-  patterns: ['Combine two structures to get O(1) everything','Move to front on every access','OrderedDict shortcut in Python'],
-  problems: ['LRU Cache','LFU Cache','Design Browser History'],
-  pitfalls: ['Forgetting to update recency on get','Not removing the evicted key from the map'],
-  py: `from collections import OrderedDict
-class LRUCache:
-    def __init__(self, cap):
-        self.cap, self.d = cap, OrderedDict()
-    def get(self, k):
-        if k not in self.d:
-            return -1
-        self.d.move_to_end(k)
-        return self.d[k]
-    def put(self, k, v):
-        self.d[k] = v
-        self.d.move_to_end(k)
-        if len(self.d) > self.cap:
-            self.d.popitem(last=False)`,
-  related: ['hash-map','linked-list'],
-},
-{
-  id: 'segment-tree', name: 'Segment Tree', group: 'range', level: 'adv',
-  one: 'A tree over an array where each node stores a summary (sum, min, max) of a range. It answers range questions while values keep changing.',
-  ops: [['Build','O(n)'],['Range query','O(log n)'],['Point update','O(log n)'],['Range update (lazy propagation)','O(log n)']],
-  use: ['Range sum / min / max with updates','Counting values in a range','Interval problems'],
-  patterns: ['Array-backed tree (size 2n or 4n)','Lazy propagation','Coordinate compression'],
-  problems: ['Range Sum Query - Mutable','Count of Smaller Numbers After Self','My Calendar III','Falling Squares'],
-  pitfalls: ['Off-by-one in range bounds','Overkill when nothing changes: use prefix sums'],
-  py: `t = [0] * n + nums           # leaves at t[n:]
-for i in range(n - 1, 0, -1):
-    t[i] = t[2 * i] + t[2 * i + 1]
+counter = 0
+lock = threading.Lock()
 
-def update(i, v):
-    i += n
-    t[i] = v
-    while i > 1:
-        i //= 2
-        t[i] = t[2 * i] + t[2 * i + 1]`,
-  related: ['fenwick-tree','array','balanced-bst'],
+def increment():
+    global counter
+    for _ in range(100_000):
+        with lock:          # Mutual exclusion prevents race conditions
+            counter += 1
+
+t1 = threading.Thread(target=increment)
+t2 = threading.Thread(target=increment)
+t1.start(); t2.start(); t1.join(); t2.join()
+print("Safe counter:", counter)`,
+  related: ['architecture','networking','databases','distributed-systems'],
 },
+
 {
-  id: 'fenwick-tree', name: 'Fenwick Tree', group: 'range', level: 'adv',
-  one: 'A compact array trick for prefix sums that can change. Less flexible than a segment tree, but far less code.',
-  ops: [['Prefix sum','O(log n)'],['Point update','O(log n)'],['Range sum (two prefixes)','O(log n)'],['Space','O(n)']],
-  use: ['Running counts with updates','Counting inversions','Rank queries over small value ranges'],
-  patterns: ['i & -i gives the lowest set bit','1-indexed array','sum(l..r) = prefix(r) − prefix(l − 1)'],
-  problems: ['Range Sum Query - Mutable','Count of Smaller Numbers After Self','Reverse Pairs','Create Sorted Array through Instructions'],
-  pitfalls: ['Mixing 0-indexed and 1-indexed','Only works for reversible operations like sum'],
-  py: `tree = [0] * (n + 1)
-def add(i, delta):          # i is 1-indexed
-    while i <= n:
-        tree[i] += delta
-        i += i & -i
-def prefix(i):
-    s = 0
-    while i > 0:
-        s += tree[i]
-        i -= i & -i
-    return s`,
-  related: ['segment-tree','array'],
+  id: 'networking', name: 'Computer Networks', group: 'systems', level: 'core',
+  one: 'How independent computers communicate across the globe: the Internet architecture, protocols, packets, routing, addressing, and reliable data transmission.',
+  core: [
+    ['OSI & TCP/IP Model', 'Layers: Physical → Data Link → Network → Transport → Application'],
+    ['IP Addressing & DNS', 'IPv4/IPv6 packet routing and human-readable domain resolution'],
+    ['TCP vs UDP', 'Guaranteed ordered byte streams (TCP) vs lightweight datagrams (UDP)'],
+    ['HTTP/HTTPS & TLS', 'Stateless web request/response encrypted via asymmetric/symmetric crypto'],
+    ['Routing & Sockets', 'BGP inter-network routing and OS network socket file descriptors'],
+  ],
+  why: [
+    'Virtually all modern software is networked: cloud services, APIs, databases, streaming',
+    'Network latency and bandwidth are the primary performance bottlenecks for web applications',
+    'Understanding packet loss, timeouts, and retries is essential for resilient system design',
+  ],
+  patterns: [
+    'Keep-alive and connection pooling to avoid repeating 3-way handshakes',
+    'Idempotent retries with exponential backoff and jitter',
+    'Content Delivery Networks (CDNs) caching static assets near users',
+    'WebSockets and gRPC (HTTP/2 multiplexing) for real-time bidirectional streams',
+  ],
+  examples: [
+    'The global Internet and Border Gateway Protocol (BGP)',
+    'Cloudflare and AWS CloudFront global edge networks',
+    'HTTPS TLS 1.3 handshakes securing online banking and commerce',
+    'Video conferencing and gaming protocols using UDP',
+  ],
+  pitfalls: [
+    'Assuming the network is reliable, zero-latency, and infinite bandwidth (Fallacies of Distributed Computing)',
+    'Retry storms: uncoordinated retries crashing an already struggling backend',
+    'Neglecting timeout configurations on HTTP and database socket clients',
+  ],
+  py: `# Simple TCP Client using Python sockets
+import socket
+
+# Connect to HTTP service over standard TCP port 80
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect(('example.com', 80))
+    s.sendall(b"GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n")
+    response = s.recv(1024)
+    print("Received first 100 bytes:", response[:100])`,
+  related: ['os','databases','distributed-systems','web-cloud','cybersecurity'],
 },
+
 {
-  id: 'binary-search', name: 'Binary Search', group: 'algorithms', level: 'core',
-  one: 'Repeatedly halving a search space by testing the midpoint against a monotonic condition to find a target or threshold in O(log n) time.',
-  ops: [['Find exact match','O(log n)'],['Find lower / upper bound','O(log n)'],['Search answer space','O(log(range) · check)'],['Space complexity','O(1)']],
-  use: ['Searching a sorted array or monotonic list','Finding the boundary where a condition flips (first bad version)','Optimization over an answer space (min capacity, max speed)'],
-  patterns: ['Classic two pointers: left <= right','Bisect left / right index boundary','Search on monotonic answer space: check(mid)','Rotated sorted array: find the sorted half first'],
-  problems: ['Binary Search','Search in Rotated Sorted Array','Find First and Last Position of Element','Koko Eating Bananas','Capacity To Ship Packages Within D Days','Median of Two Sorted Arrays'],
-  pitfalls: ['Off-by-one errors with mid vs mid ± 1','Integer overflow in static languages (use left + (right - left) // 2)','Infinite loop when the boundary never shrinks'],
-  py: `def binary_search(nums, target):
-    lo, hi = 0, len(nums) - 1
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        if nums[mid] == target:
-            return mid
-        elif nums[mid] < target:
-            lo = mid + 1
-        else:
-            hi = mid - 1
-    return -1`,
-  related: ['array','bst','divide-and-conquer'],
+  id: 'databases', name: 'Databases & Storage Systems', group: 'data', level: 'core',
+  one: 'Organizing, persisting, and querying data reliably: relational SQL databases, NoSQL document stores, indexing, transactions, and storage engines.',
+  core: [
+    ['ACID Transactions', 'Atomicity, Consistency, Isolation, and Durability guarantees'],
+    ['Relational (SQL)', 'Tables, foreign key constraints, schemas, joins, and normalization'],
+    ['NoSQL Models', 'Key-Value (Redis), Document (MongoDB), Columnar (Cassandra), Graph (Neo4j)'],
+    ['B-Tree & LSM-Tree Indexes', 'Logarithmic lookups on disk vs write-optimized append logs'],
+    ['Query Planners', 'Cost-based optimization, sequential scans vs index lookups'],
+  ],
+  why: [
+    'Data is the lifeblood of organizations; losing or corrupting data is catastrophic',
+    'Choosing the wrong database or indexing strategy brings entire companies to a standstill',
+    'Enables complex analytical queries across billions of records in milliseconds',
+  ],
+  patterns: [
+    'Index columns used in WHERE, JOIN, and ORDER BY clauses',
+    'Write-Ahead Logging (WAL) to survive unexpected power loss',
+    'Read replicas to offload read-heavy traffic from primary database',
+    'Connection pooling and prepared statements to minimize parsing overhead',
+  ],
+  examples: [
+    'PostgreSQL & MySQL: the industry standards for relational workloads',
+    'SQLite: the most widely deployed database engine in history (in every phone and browser)',
+    'Redis: in-memory key-value data structure store used for caching and leaderboards',
+    'Apache Kafka & ClickHouse for high-throughput append-only event streaming and analytics',
+  ],
+  pitfalls: [
+    'N+1 Query Problem: issuing a query inside a loop instead of a single batch join',
+    'Over-indexing: every index speeds up reads but slows down inserts and updates',
+    'Not setting transaction isolation levels appropriately, leading to phantom reads or deadlocks',
+  ],
+  py: `# Using SQLite in Python with ACID transactions
+import sqlite3
+
+conn = sqlite3.connect(':memory:')
+cursor = conn.cursor()
+cursor.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, balance INT)')
+cursor.execute('INSERT INTO users VALUES (1, "Alice", 500), (2, "Bob", 300)')
+conn.commit()
+
+# Atomic transfer within a transaction
+with conn:
+    cursor.execute('UPDATE users SET balance = balance - 100 WHERE id = 1')
+    cursor.execute('UPDATE users SET balance = balance + 100 WHERE id = 2')
+
+for row in cursor.execute('SELECT name, balance FROM users'):
+    print(row)`,
+  related: ['dsa','os','distributed-systems','web-cloud'],
 },
+
 {
-  id: 'divide-and-conquer', name: 'Divide and Conquer', group: 'algorithms', level: 'good',
-  one: 'Breaking a problem into independent subproblems of the same type, solving each recursively, and combining their results to solve the original problem.',
-  ops: [['Divide step','O(1)'],['Combine step (Merge Sort)','O(n)'],['Total (Merge Sort)','O(n log n)'],['Total (Binary Search)','O(log n)'],['Recursion stack space','O(log n)']],
-  use: ['Sorting large collections efficiently (Merge Sort, Quick Sort)','Tree traversals and divide-and-combine tree problems','Fast arithmetic (exponentiation, matrix multiplication, Closest Pair)'],
-  patterns: ['Divide into independent subproblems (left and right halves)','Combine / merge step does the heavy lifting','Base cases for trivial inputs (size 0 or 1)','Master Theorem for recurrence analysis'],
-  problems: ['Sort an Array','Kth Largest Element in an Array','Merge k Sorted Lists','Maximum Subarray','Pow(x, n)','Construct Binary Tree from Preorder and Inorder'],
-  pitfalls: ['Redundant recomputation of overlapping subproblems (use DP instead)','Inefficient combine step negating recursive speedup','Worst-case deep recursion stack overflow (e.g. naive Quick Sort)'],
-  py: `def merge_sort(nums):
-    if len(nums) <= 1:
-        return nums
-    mid = len(nums) // 2
-    left = merge_sort(nums[:mid])
-    right = merge_sort(nums[mid:])
-    merged, i, j = [], 0, 0
-    while i < len(left) and j < len(right):
-        if left[i] <= right[j]:
-            merged.append(left[i]); i += 1
-        else:
-            merged.append(right[j]); j += 1
-    merged.extend(left[i:] or right[j:])
-    return merged`,
-  related: ['binary-search','binary-tree','dynamic-programming'],
+  id: 'distributed-systems', name: 'System Design & Distributed Systems', group: 'data', level: 'good',
+  one: 'Coordinating multiple computers connected by a network to act as a single coherent system: scalability, fault tolerance, replication, and consensus.',
+  core: [
+    ['CAP Theorem', 'Consistency vs Availability vs Partition tolerance tradeoffs'],
+    ['Load Balancing', 'Distributing incoming traffic evenly across pools of application servers'],
+    ['Caching Strategies', 'Cache-aside, write-through, and cache eviction policies (LRU/LFU)'],
+    ['Message Queues', 'Decoupling producers and consumers with pub/sub event brokers'],
+    ['Consensus Algorithms', 'Raft and Paxos for reaching agreement across unreliable nodes'],
+  ],
+  why: [
+    'No single machine can handle the traffic of global modern applications (Google, Netflix, Amazon)',
+    'Hardware fails constantly at scale; distributed architectures ensure continuous uptime',
+    'Required knowledge for senior software engineering and system architecture roles',
+  ],
+  patterns: [
+    'Horizontal scaling (adding more nodes) over vertical scaling (buying a bigger box)',
+    'Database sharding and consistent hashing for even partition distribution',
+    'Circuit breakers to stop cascading failures when downstream services fail',
+    'Eventual consistency and idempotent message handling',
+  ],
+  examples: [
+    'Amazon DynamoDB and Google Spanner distributed databases',
+    'Kubernetes orchestrating microservices across server clusters',
+    'Netflix microservices architecture surviving AWS availability zone outages',
+    'CDN edge caches serving 95%+ of global web video and images',
+  ],
+  pitfalls: [
+    'Introducing microservices before needing them, multiplying operational complexity',
+    'Neglecting distributed tracing and centralized logging, making bugs impossible to debug',
+    'Assuming synchronous RPC calls will never hang or fail',
+  ],
+  py: `# Consistent Hashing concept in Python
+import hashlib
+
+nodes = ['server-alpha', 'server-beta', 'server-gamma']
+
+def pick_node(key):
+    # Hash the key to pick a deterministic node
+    digest = hashlib.md5(key.encode()).hexdigest()
+    idx = int(digest, 16) % len(nodes)
+    return nodes[idx]
+
+print("user:101 stored on:", pick_node("user:101"))
+print("user:102 stored on:", pick_node("user:102"))`,
+  related: ['networking','databases','os','web-cloud','software-engineering'],
 },
+
 {
-  id: 'greedy', name: 'Greedy', group: 'algorithms', level: 'core',
-  one: 'Making the locally optimal choice at each step with the expectation of finding a global optimum, without ever rethinking past decisions.',
-  ops: [['Single greedy choice','O(1)'],['Sort input (often needed)','O(n log n)'],['Heap-driven greedy choice','O(log n)'],['Overall pass','O(n) or O(n log n)']],
-  use: ['Interval scheduling and resource allocation','Shortest path (Dijkstra) and Minimum Spanning Tree (Kruskal, Prim)','Data compression (Huffman coding) and fractional knapsack'],
-  patterns: ['Sort by end time or deadline first','Priority queue / min-heap for dynamic minimum choices','Two pointers greedy pairing','Exchange argument to prove greedy choice property'],
-  problems: ['Jump Game','Gas Station','Non-overlapping Intervals','Task Scheduler','Assign Cookies','Candy'],
-  pitfalls: ['Assuming greedy works when current choices constrain future options (requires DP)','Sorting by start time instead of end time in interval scheduling','Overlooking tie-breaking edge cases'],
-  py: `def eraseOverlapIntervals(intervals):
-    intervals.sort(key=lambda x: x[1])
-    count, last_end = 0, float('-inf')
-    for start, end in intervals:
-        if start >= last_end:
-            last_end = end
-        else:
-            count += 1
-    return count`,
-  related: ['dynamic-programming','heap','array'],
+  id: 'languages-compilers', name: 'Programming Languages & Compilers', group: 'foundations', level: 'good',
+  one: 'How human-readable text is translated into executable machine code: lexical analysis, abstract syntax trees, type systems, interpreters, and runtime virtual machines.',
+  core: [
+    ['Lexing & Parsing', 'Tokens → Context-Free Grammars → Abstract Syntax Trees (ASTs)'],
+    ['Compilation vs Interpretation', 'Ahead-of-Time (AOT) machine code vs Just-In-Time (JIT) vs bytecode VMs'],
+    ['Type Systems', 'Static vs dynamic typing; strong vs weak; type inference and safety'],
+    ['Memory Management', 'Manual allocation (malloc/free) vs Garbage Collection (mark-and-sweep, ref counting)'],
+    ['Paradigms', 'Imperative, Object-Oriented, Functional, and Declarative models'],
+  ],
+  why: [
+    'Demystifies programming: understanding what actually happens when you run code',
+    'Allows you to pick the right tool for the job (Rust for safety/speed, Python for speed of development)',
+    'Enables building domain-specific languages, linters, code formatters, and query parsers',
+  ],
+  patterns: [
+    'Visitor pattern for traversing Abstract Syntax Trees',
+    'Immutable state in functional programming to prevent side-effects',
+    'RAII (Resource Acquisition Is Initialization) for deterministic cleanup in Rust/C++',
+    'JIT optimization: profile hot code paths and compile to native assembly at runtime',
+  ],
+  examples: [
+    'LLVM compiler infrastructure powering Clang, Rust, Swift, and Julia',
+    'V8 JavaScript Engine JIT-compiling JS to native x86/ARM inside Chrome and Node.js',
+    'CPython bytecode virtual machine interpreting Python .pyc instructions',
+    'Rust borrow checker enforcing memory safety without a garbage collector',
+  ],
+  pitfalls: [
+    'Language zealotry: treating one programming paradigm as universally superior',
+    'Ignoring garbage collection pauses in latency-critical real-time applications',
+    'Confusing syntax differences with fundamental semantic capability',
+  ],
+  py: `# Inspecting Python bytecode generated by the compiler
+import dis
+
+def add_bonus(score):
+    return score + 10
+
+# View the raw virtual machine instructions:
+print("Bytecode instructions for add_bonus:")
+dis.dis(add_bonus)`,
+  related: ['architecture','dsa','os','theory-computation'],
 },
+
 {
-  id: 'backtracking', name: 'Backtracking', group: 'algorithms', level: 'good',
-  one: 'Building candidate solutions step-by-step and abandoning ("backtracking") a candidate as soon as it is clear it cannot produce a valid solution.',
-  ops: [['Choose candidate','O(1)'],['Validate constraints','O(1)'],['Unchoose / backtrack','O(1)'],['Search space','O(k^n) or O(n!)']],
-  use: ['Generating permutations, combinations, and power sets','Constraint satisfaction puzzles (Sudoku, N-Queens, Word Search)','Finding paths in a grid or graph with obstacle constraints'],
-  patterns: ['Template: choose -> recurse -> unchoose','Pruning branches early to cut off exponential dead-ends','Handling duplicates with sorting + adjacent element check','State passing via path list or bitmask'],
-  problems: ['Subsets','Permutations','Combination Sum','N-Queens','Word Search','Sudoku Solver'],
-  pitfalls: ['Forgetting to undo state changes (unchoose) before returning','Passing mutable state without copying when recording solutions','Not pruning early enough, causing time limit exceeded (TLE)'],
-  py: `def subsets(nums):
-    res, path = [], []
-    def dfs(start):
-        res.append(list(path))
-        for i in range(start, len(nums)):
-            path.append(nums[i])
-            dfs(i + 1)
-            path.pop()  # backtrack
-    dfs(0)
-    return res`,
-  related: ['dynamic-programming','graph','binary-tree'],
+  id: 'software-engineering', name: 'Software Engineering & DevOps', group: 'software', level: 'core',
+  one: 'The disciplines and methodologies for designing, testing, building, deploying, and maintaining high-quality software systems in teams over long lifespans.',
+  core: [
+    ['Version Control (Git)', 'Snapshots, branches, merges, rebases, and pull requests'],
+    ['Testing Pyramid', 'Unit tests → Integration tests → End-to-End (E2E) automated verification'],
+    ['CI/CD Pipelines', 'Automated building, linting, testing, and progressive deployment'],
+    ['Design Patterns', 'Factory, Singleton, Observer, Strategy, Adapter, Dependency Injection'],
+    ['Containerization & Infra', 'Docker containers, declarative Infrastructure as Code (Terraform)'],
+  ],
+  why: [
+    'Code is written once but read, modified, and maintained for decades',
+    'Enables teams of hundreds of developers to ship changes simultaneously without breaking production',
+    'Differentiates hobbyist scripting from dependable enterprise-grade engineering',
+  ],
+  patterns: [
+    'Separation of Concerns and SOLID design principles',
+    'Test-Driven Development (TDD) and high test coverage on core business logic',
+    'Canary releases and feature flags to safely roll out updates to a small fraction of users',
+    'Immutable infrastructure: replace servers/containers rather than patching in-place',
+  ],
+  examples: [
+    'GitHub and GitLab modern collaboration workflows',
+    'Docker containerizing applications with all OS dependencies',
+    'GitHub Actions and Jenkins automating test and deploy pipelines',
+    'Terraform declaring cloud infrastructure as reviewable code',
+  ],
+  pitfalls: [
+    'Over-engineering with unnecessary abstraction layers for simple problems (YAGNI violation)',
+    'Deploying without automated tests or automated rollback mechanisms',
+    'Ignoring technical debt until it halts feature development velocity',
+  ],
+  py: `# Unit testing clean code in Python
+import unittest
+
+def calculate_discount(price, is_member):
+    if price < 0:
+        raise ValueError("Price cannot be negative")
+    return price * 0.9 if is_member else price
+
+class TestDiscount(unittest.TestCase):
+    def test_member_discount(self):
+        self.assertEqual(calculate_discount(100, True), 90.0)
+    def test_non_member(self):
+        self.assertEqual(calculate_discount(100, False), 100.0)
+
+unittest.main(argv=[''], exit=False)`,
+  related: ['distributed-systems','web-cloud','languages-compilers'],
 },
+
 {
-  id: 'dynamic-programming', name: 'Dynamic Programming', group: 'algorithms', level: 'core',
-  one: 'Breaking complex optimization problems into overlapping subproblems, solving each once, and storing results in a table to avoid redundant work.',
-  ops: [['State lookup / cache hit','O(1)'],['Compute single state','O(transitions)'],['Fill 1D table','O(n)'],['Fill 2D table','O(n · m)'],['State compression space','O(n) or O(1)']],
-  use: ['Overlapping subproblems and optimal substructure','Min/max optimization, path counting, and feasibility checks','Greedy fails because earlier decisions affect future choices'],
-  patterns: ['Memoization (top-down recursion with cache)','Tabulation (bottom-up iteration)','Space optimization (rolling array, keep only last row)','0/1 Knapsack & Unbounded Knapsack','Longest Common Subsequence & Longest Increasing Subsequence'],
-  problems: ['Climbing Stairs','Coin Change','Longest Increasing Subsequence','0/1 Knapsack','Word Break','Edit Distance'],
-  pitfalls: ['Missing base cases or array offset errors','Using DP when a simpler greedy or two-pointer approach suffices','Unbounded memory when state space is unnecessarily large'],
-  py: `def coinChange(coins, amount):
-    dp = [float('inf')] * (amount + 1)
-    dp[0] = 0
-    for a in range(1, amount + 1):
-        for c in coins:
-            if a >= c:
-                dp[a] = min(dp[a], 1 + dp[a - c])
-    return dp[amount] if dp[amount] != float('inf') else -1`,
-  related: ['greedy','backtracking','array','grid'],
+  id: 'web-cloud', name: 'Web Technologies & Cloud Computing', group: 'software', level: 'good',
+  one: 'How modern user-facing applications are delivered: browser DOM, HTML/CSS/JS, REST/GraphQL APIs, cloud infrastructure, and serverless architectures.',
+  core: [
+    ['Browser Engine & DOM', 'HTML parsing, CSS cascade layout engine, and JavaScript V8 execution'],
+    ['Client-Server APIs', 'REST endpoints, GraphQL query schemas, and gRPC remote procedure calls'],
+    ['Cloud Computing (IaaS/PaaS)', 'Compute instances (EC2), managed databases, object storage (S3)'],
+    ['Serverless & Edge', 'Event-driven functions (AWS Lambda) running at the network edge'],
+    ['Web Security', 'Cross-Origin Resource Sharing (CORS), CSP, Cookies, and HTTPS'],
+  ],
+  why: [
+    'The web is the universal application deployment platform accessible to any device with a browser',
+    'Cloud computing eliminated the need for companies to buy and manage physical server rooms',
+    'Enables instant global distribution of software updates with zero client-side installation',
+  ],
+  patterns: [
+    'Single Page Application (SPA) vs Server-Side Rendering (SSR) for SEO and initial load speed',
+    'Stateless authentication using JWTs or secure HttpOnly session cookies',
+    'Edge caching of static assets and API responses',
+    'Micro-frontends and component-driven UI architecture',
+  ],
+  examples: [
+    'Modern web browsers (Chromium, WebKit, Gecko)',
+    'Cloud providers: Amazon Web Services (AWS), Google Cloud (GCP), Microsoft Azure',
+    'Vercel and Cloudflare Pages edge hosting platforms',
+    'React, Vue, and Svelte frontend UI component frameworks',
+  ],
+  pitfalls: [
+    'Bloating client-side bundle size with massive JavaScript libraries, degrading mobile experience',
+    'Improper CORS configuration exposing internal APIs to malicious websites',
+    'Cloud bill shock from misconfigured autoscaling or unmonitored serverless triggers',
+  ],
+  py: `# Modern lightweight Web API using Python (FastAPI/Flask style)
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+
+class SimpleAPI(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        data = {"message": "Hello from Cloud API!", "status": "online"}
+        self.wfile.write(json.dumps(data).encode())
+
+print("API ready to serve on port 8000")`,
+  related: ['networking','software-engineering','databases','distributed-systems'],
+},
+
+{
+  id: 'ai-ml', name: 'Artificial Intelligence & Machine Learning', group: 'ai_sec', level: 'good',
+  one: 'Designing systems that learn from data rather than following explicit rules: neural networks, deep learning, NLP, computer vision, and foundation models.',
+  core: [
+    ['Learning Paradigms', 'Supervised (labels) vs Unsupervised (patterns) vs Reinforcement (rewards)'],
+    ['Neural Networks', 'Layers of artificial neurons computing weighted sums and activation functions'],
+    ['Gradient Descent & Backprop', 'Optimizing millions/billions of weights by calculating error loss gradients'],
+    ['Transformers & Attention', 'Self-attention mechanism processing sequences in parallel (foundation of LLMs)'],
+    ['Training vs Inference', 'Heavy GPU cluster model training vs lightweight deployed predictions'],
+  ],
+  why: [
+    'Solves problems that are impossible to write explicit rule-based code for (vision, speech, natural language)',
+    'Powering the modern revolution in generative AI, autonomous robotics, and automated discovery',
+    'Transforms raw messy data into high-value intelligence, predictions, and recommendations',
+  ],
+  patterns: [
+    'Embeddings: representing words, images, and concepts as vectors in high-dimensional space',
+    'Transfer learning: fine-tuning massive pretrained foundation models on domain-specific data',
+    'Vector search: finding nearest neighbors with cosine similarity for RAG systems',
+    'Evaluation metrics: Precision, Recall, F1-Score, and Loss curves',
+  ],
+  examples: [
+    'Large Language Models (GPT-4, Gemini, Claude, LLaMA)',
+    'AlphaFold predicting 3D structures of hundreds of millions of proteins',
+    'Autonomous driving perception and navigation stacks (Tesla FSD, Waymo)',
+    'Recommendation engines powering YouTube, Spotify, and TikTok',
+  ],
+  pitfalls: [
+    'Data leakage and overfitting: model memorizes training data but fails completely on new real-world data',
+    'Treating AI as a magic black box without understanding data bias and hallucinations',
+    'Using deep neural nets when simple linear regression or decision trees are faster and more interpretable',
+  ],
+  py: `# Simplest Neural Network forward pass in pure Python
+import math
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+# Inputs: x1, x2 | Weights: w1, w2 | Bias: b
+inputs = [0.5, 0.8]
+weights = [1.2, -0.7]
+bias = 0.1
+
+# Compute activation:
+z = sum(x * w for x, w in zip(inputs, weights)) + bias
+output = sigmoid(z)
+print(f"Neuron output: {output:.4f}")`,
+  related: ['dsa','architecture','databases','cybersecurity'],
+},
+
+{
+  id: 'cybersecurity', name: 'Cybersecurity & Cryptography', group: 'ai_sec', level: 'good',
+  one: 'Protecting systems, networks, and data from adversarial attacks: cryptographic algorithms, authentication, authorization, vulnerability defense, and secure design.',
+  core: [
+    ['CIA Triad', 'Confidentiality (privacy), Integrity (tamper-proofing), Availability (uptime)'],
+    ['Symmetric Encryption', 'Fast single shared-key encryption (AES-256, ChaCha20)'],
+    ['Asymmetric Encryption', 'Public/Private key pairs for signatures and key exchange (RSA, ECC, Ed25519)'],
+    ['Cryptographic Hashes', 'One-way collision-resistant digests (SHA-256) and salted password hashing (Argon2, bcrypt)'],
+    ['Threat Vectors', 'SQL Injection, XSS, CSRF, Buffer Overflows, DDoS, and Social Engineering'],
+  ],
+  why: [
+    'A single security breach can destroy user trust, cost millions, and ruin businesses',
+    'Guarantees privacy for billions of people communicating online every day',
+    'Every software developer must write security-aware code to avoid catastrophic vulnerabilities',
+  ],
+  patterns: [
+    'Principle of Least Privilege: grant only the minimum permissions needed',
+    'Defense in Depth: layered security controls instead of relying on a single perimeter wall',
+    'Never roll your own crypto: always use audited, peer-reviewed standard libraries',
+    'Input validation and parameterized queries to eliminate injection vulnerabilities',
+  ],
+  examples: [
+    'End-to-End Encryption in Signal and WhatsApp using the Double Ratchet Algorithm',
+    'TLS certificates securing the padlock in web browser address bars',
+    'Hardware Security Keys (YubiKey / FIDO2 Passkeys) replacing passwords',
+    'Tor onion routing network providing anonymous communication',
+  ],
+  pitfalls: [
+    'Storing passwords in plaintext or with fast cryptographic hashes like MD5/SHA256 (use bcrypt/Argon2)',
+    'Hardcoding API secrets, private keys, or credentials inside Git repositories',
+    'Assuming security through obscurity (relying on hidden URLs or undocumented algorithms)',
+  ],
+  py: `# Secure password hashing and verification in Python
+import hashlib
+import secrets
+
+def hash_password(password, salt=None):
+    if salt is None:
+        salt = secrets.token_hex(16)
+    # Salted SHA-256 demonstration (in production use Argon2/bcrypt)
+    digest = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"{salt}:{digest}"
+
+stored_hash = hash_password("secret_pass123")
+salt, hashed = stored_hash.split(':')
+# Verify password:
+check_hash = hash_password("secret_pass123", salt=salt).split(':')[1]
+print("Password verified:", check_hash == hashed)`,
+  related: ['networking','os','web-cloud','theory-computation'],
+},
+
+{
+  id: 'theory-computation', name: 'Theory of Computation & Math', group: 'foundations', level: 'adv',
+  one: 'The mathematical foundations exploring the fundamental capabilities and boundaries of computers: automata, formal grammars, computability, and complexity theory.',
+  core: [
+    ['Finite Automata', 'State machines recognizing regular languages (regex engine foundations)'],
+    ['Turing Machines', 'Abstract mathematical models of computation defining what is computable'],
+    ['Halting Problem', 'Alan Turing proof that no general algorithm can predict if all programs will halt'],
+    ['Complexity Classes', 'P (polynomial time), NP (verifiable in polynomial time), and NP-Complete'],
+    ['P vs NP Problem', 'The million-dollar open question: is verifying a solution as fast as finding one?'],
+  ],
+  why: [
+    'Defines the absolute boundaries of what is mathematically possible with computers',
+    'Prevents engineers from wasting years trying to solve provably unsolvable or intractable problems',
+    'Directly inspires regular expressions, compiler lexers, and modern cryptographic security proofs',
+  ],
+  patterns: [
+    'Reduction: proving a problem is hard by converting a known NP-hard problem into it',
+    'State machine transitions: input events driving deterministic state transitions',
+    'Recognizing intractable combinatorial explosion before writing code',
+    'Approximation algorithms and heuristics for NP-hard real-world problems (TSP, Bin Packing)',
+  ],
+  examples: [
+    'Regular expression matching engines using Non-deterministic Finite Automata (NFAs)',
+    'RSA and Elliptic Curve cryptography depending on the hardness of integer factorization',
+    'Traveling Salesperson Problem (TSP) heuristic solvers in logistics delivery routes',
+    'Compiler syntax analyzers using Context-Free Grammars (Pushdown Automata)',
+  ],
+  pitfalls: [
+    'Trying to write an algorithm that is guaranteed to find optimal solutions to NP-Complete problems in polynomial time',
+    'Believing faster hardware will make exponential time O(2^n) algorithms feasible for large inputs',
+    'Confusing regular expressions with full Turing-complete programming languages',
+  ],
+  py: `# Simple Deterministic Finite Automaton (DFA) recognizing binary numbers ending in '01'
+def dfa_ends_with_01(binary_string):
+    state = 'S0' # S0: start/other, S1: saw '0', S2: saw '01' (accepting)
+    for bit in binary_string:
+        if state == 'S0':
+            state = 'S1' if bit == '0' else 'S0'
+        elif state == 'S1':
+            state = 'S2' if bit == '1' else 'S1'
+        elif state == 'S2':
+            state = 'S1' if bit == '0' else 'S0'
+    return state == 'S2'
+
+print("'101' ends with 01?", dfa_ends_with_01("101")) # True
+print("'100' ends with 01?", dfa_ends_with_01("100")) # False`,
+  related: ['dsa','languages-compilers','cybersecurity'],
 },
 ];

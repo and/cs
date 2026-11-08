@@ -1,49 +1,49 @@
-# DS/Map: data structures & algorithms, mapped
+# CS/Map: Computer Science, Mapped
 
-A 3D map of 24 core data structures and algorithms. Each topic is a cluster that branches into:
+A 3D, explorable universe of the **12 major fields of Computer Science**, built for beginners and engineers alike. Data Structures & Algorithms is presented as one core pillar alongside Hardware Architecture, Operating Systems, Distributed Systems, Machine Learning, and Cybersecurity.
 
-- **Operations & cost**: time complexity of each operation
-- **Use it when**: situations where it's the right choice
-- **Patterns**: standard patterns and algorithmic techniques
-- **Practice problems**: linked to problem searches
-- **Pitfalls**: common mistakes
+Each domain forms an organic 3D cluster that branches into:
 
-Every topic also has a short Python snippet and links to related topics.
+- **Core concepts**: Key models and principles
+- **Why it matters**: Real-world engineering impact and why it exists
+- **Techniques & patterns**: Fundamental design patterns and paradigms
+- **Milestone systems**: Landmark systems that shaped computing (e.g. Linux, Git, Postgres, Raft, LLVM)
+- **Beginner pitfalls**: Common misconceptions and traps to avoid
+
+Every topic includes an illustrative SVG diagram, an actionable code example, and links to interconnected domains.
 
 ## Features
 
-- Drag to rotate, scroll to fly, click a cluster (or any dot) to open its details
-- Search with autocomplete across every node (press `/`); nicknames like "dict" or "priority queue" work too
-- A learning path in a suggested order, with Prev/Next or the ← → keys
-- "Mark as understood" progress, saved in your browser
-- Each structure has its own link, for example `index.html#heap`
-- List view for reading rather than exploring in 3D
-- **Play tour & Topic loop**: a slow, film-like walk through all 24 topics or loop through a single topic continuously. Use pause, prev/next, speed (0.5×–2×), and toggles to hide the side panel (`P`) or captions (`C`)
-- **Dark mode** (`D`) with glowing nodes, plus fullscreen (`F`). During the tour, controls and the cursor fade out after 3 seconds, so it works well on a TV
+- **Interactive Category Filtering**: Filter the entire 3D constellation by domain (**Foundations**, **Systems & Hardware**, **Data & Scale**, **Software & Web**, **AI & Security**) or view everything at once.
+- **Clean Sans-Serif Typography**: Modern, readable typography designed for clarity.
+- **3D Navigation**: Drag to rotate, scroll to fly, click a cluster (or any dot) to open its details.
+- **Search with Autocomplete**: Press `/` to search topics, systems, algorithms, and concepts across all nodes.
+- **Learning Path & Guided Tour**: Follow the curated learning path in order, play an automated film-like tour, or loop through a single topic continuously (`🔁`).
+- **Progress Tracking**: "Mark as understood" progress saved locally in your browser.
+- **List View**: A clean grid view for reading through the entire curriculum.
+- **Dark Mode (`D`)**: Toggle dark mode with subtle glowing constellations.
+- **Keyboard Shortcuts**: `/` search · `Space` play/pause tour · `L` toggle loop mode · `← →` previous/next topic · `Esc` close/stop · `D` dark mode · `F` fullscreen
 
-Keyboard: `/` search · `Space` play/pause · `← →` previous/next · `Esc` stop or close · `D` dark mode · `F` fullscreen
+## Run It
 
-## Run it
+`index.html` is completely self-contained (Three.js and diagrams are bundled in), so you can open it directly in any browser or host it via GitHub Pages.
 
-`index.html` is self-contained (three.js is bundled in), so open it in a browser or serve it with GitHub Pages.
+Live site: [https://and.github.io/cs/](https://and.github.io/cs/)
 
-## Edit it
-
-- Content lives in `src/data.js`
-- Scene and UI logic is in `src/app.js`
-- Page markup and styles are in `src/shell.html`
-
-Rebuild `index.html` after changes:
+## Development
 
 ```sh
 npm install
 npm run build
 ```
 
-## How it's built
+## Structure
 
-Plain three.js with no framework: one `InstancedMesh` for every node, one `LineSegments` for every edge, fog for depth, and HTML labels positioned each frame with overlap culling. Clicking uses screen-space distance instead of raycasting, and the camera picks the clearest viewing angle when it flies to a structure.
+- `src/data.js`: The 12 CS topics, domains, branches, and code examples
+- `src/viz.js`: Custom SVG diagrams for each field of computing
+- `src/app.js`: 3D WebGL scene, category filtering, camera choreography, and tour engine
+- `src/shell.html`: UI styling, layouts, and controls
 
 ## Credit
 
-The visual idea and interaction model are inspired by [gtmbrain.si](https://gtmbrain.si/) by Pancake.
+The visual concept and interaction model are inspired by [gtmbrain.si](https://gtmbrain.si/) by Pancake.
