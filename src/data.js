@@ -1,9 +1,10 @@
 export const GROUPS = {
-  linear:  { name: 'Linear',        color: '#3B6FE0' },
-  hashing: { name: 'Hashing',       color: '#E0703B' },
-  trees:   { name: 'Trees & heaps', color: '#2E9E6A' },
-  graphs:  { name: 'Graphs',        color: '#8A4FD8' },
-  range:   { name: 'Range queries', color: '#D9447A' },
+  linear:     { name: 'Linear',        color: '#3B6FE0' },
+  hashing:    { name: 'Hashing',       color: '#E0703B' },
+  trees:      { name: 'Trees & heaps', color: '#2E9E6A' },
+  graphs:     { name: 'Graphs',        color: '#8A4FD8' },
+  range:      { name: 'Range queries', color: '#D9447A' },
+  algorithms: { name: 'Algorithms',    color: '#D97706' },
 };
 
 export const BRANCHES = [
@@ -17,7 +18,8 @@ export const BRANCHES = [
 export const LEVELS = { core: 'Must know', good: 'Good to know', adv: 'Advanced' };
 
 export const ORDER = ['array','string','hash-map','hash-set','linked-list','stack','queue','deque',
-  'binary-tree','bst','heap','grid','graph','trie','union-find','lru-cache','balanced-bst','segment-tree','fenwick-tree'];
+  'binary-tree','bst','heap','grid','graph','trie','union-find','lru-cache','balanced-bst','segment-tree','fenwick-tree',
+  'binary-search','divide-and-conquer','greedy','backtracking','dynamic-programming'];
 
 export const DS = [
 {
@@ -89,7 +91,7 @@ return False`,
   id: 'linked-list', name: 'Linked List', group: 'linear', level: 'core',
   one: 'A chain of nodes. Each holds a value and a pointer to the next node. Easy to splice, slow to index.',
   ops: [['Access the k-th item','O(n)'],['Insert / delete at head','O(1)'],['Insert / delete after a known node','O(1)'],['Search','O(n)'],['Append (with a tail pointer)','O(1)']],
-  use: ['Many insertions and removals in the middle','Building other structures (LRU cache, queues)','Pointer-manipulation interview questions'],
+  use: ['Many insertions and removals in the middle','Building other structures (LRU cache, queues)','Pointer-manipulation problems'],
   patterns: ['Dummy head node','Fast and slow pointers','Reverse in place','Merge two sorted lists'],
   problems: ['Reverse Linked List','Linked List Cycle','Merge Two Sorted Lists','Remove Nth Node From End of List','Reorder List','Merge k Sorted Lists'],
   pitfalls: ['Losing the rest of the list when you re-point next','Not checking for None before node.next.next','Forgetting to return the new head'],
@@ -199,7 +201,7 @@ for i, x in enumerate(nums):
   use: ['You need a sorted map or set (Java TreeMap, C++ std::map)','Sliding window that needs order (median, k-th)','Checking for overlapping bookings'],
   patterns: ['Python: sortedcontainers.SortedList','Rotations keep the height small (know the idea)'],
   problems: ['My Calendar I','Contains Duplicate III','Sliding Window Median','Count of Smaller Numbers After Self'],
-  pitfalls: ['Python has no built-in one','Interviewers rarely expect you to code rotations'],
+  pitfalls: ['Python has no built-in one','Rarely needed to code rotations from scratch'],
   py: `from sortedcontainers import SortedList
 sl = SortedList([5, 1, 3])
 sl.add(2)              # O(log n)
@@ -304,7 +306,7 @@ def union(a, b):
   id: 'lru-cache', name: 'LRU Cache', group: 'hashing', level: 'good',
   one: 'A hash map plus a doubly linked list. The map finds items in O(1); the list remembers which item was used least recently.',
   ops: [['Get','O(1)'],['Put','O(1)'],['Evict least recently used','O(1)']],
-  use: ['Caching with limited memory','The classic "design a data structure" interview question'],
+  use: ['Caching with limited memory','The classic "design a data structure" system problem'],
   patterns: ['Combine two structures to get O(1) everything','Move to front on every access','OrderedDict shortcut in Python'],
   problems: ['LRU Cache','LFU Cache','Design Browser History'],
   pitfalls: ['Forgetting to update recency on get','Not removing the evicted key from the map'],
@@ -364,5 +366,107 @@ def prefix(i):
         i -= i & -i
     return s`,
   related: ['segment-tree','array'],
+},
+{
+  id: 'binary-search', name: 'Binary Search', group: 'algorithms', level: 'core',
+  one: 'Repeatedly halving a search space by testing the midpoint against a monotonic condition to find a target or threshold in O(log n) time.',
+  ops: [['Find exact match','O(log n)'],['Find lower / upper bound','O(log n)'],['Search answer space','O(log(range) · check)'],['Space complexity','O(1)']],
+  use: ['Searching a sorted array or monotonic list','Finding the boundary where a condition flips (first bad version)','Optimization over an answer space (min capacity, max speed)'],
+  patterns: ['Classic two pointers: left <= right','Bisect left / right index boundary','Search on monotonic answer space: check(mid)','Rotated sorted array: find the sorted half first'],
+  problems: ['Binary Search','Search in Rotated Sorted Array','Find First and Last Position of Element','Koko Eating Bananas','Capacity To Ship Packages Within D Days','Median of Two Sorted Arrays'],
+  pitfalls: ['Off-by-one errors with mid vs mid ± 1','Integer overflow in static languages (use left + (right - left) // 2)','Infinite loop when the boundary never shrinks'],
+  py: `def binary_search(nums, target):
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1`,
+  related: ['array','bst','divide-and-conquer'],
+},
+{
+  id: 'divide-and-conquer', name: 'Divide and Conquer', group: 'algorithms', level: 'good',
+  one: 'Breaking a problem into independent subproblems of the same type, solving each recursively, and combining their results to solve the original problem.',
+  ops: [['Divide step','O(1)'],['Combine step (Merge Sort)','O(n)'],['Total (Merge Sort)','O(n log n)'],['Total (Binary Search)','O(log n)'],['Recursion stack space','O(log n)']],
+  use: ['Sorting large collections efficiently (Merge Sort, Quick Sort)','Tree traversals and divide-and-combine tree problems','Fast arithmetic (exponentiation, matrix multiplication, Closest Pair)'],
+  patterns: ['Divide into independent subproblems (left and right halves)','Combine / merge step does the heavy lifting','Base cases for trivial inputs (size 0 or 1)','Master Theorem for recurrence analysis'],
+  problems: ['Sort an Array','Kth Largest Element in an Array','Merge k Sorted Lists','Maximum Subarray','Pow(x, n)','Construct Binary Tree from Preorder and Inorder'],
+  pitfalls: ['Redundant recomputation of overlapping subproblems (use DP instead)','Inefficient combine step negating recursive speedup','Worst-case deep recursion stack overflow (e.g. naive Quick Sort)'],
+  py: `def merge_sort(nums):
+    if len(nums) <= 1:
+        return nums
+    mid = len(nums) // 2
+    left = merge_sort(nums[:mid])
+    right = merge_sort(nums[mid:])
+    merged, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            merged.append(left[i]); i += 1
+        else:
+            merged.append(right[j]); j += 1
+    merged.extend(left[i:] or right[j:])
+    return merged`,
+  related: ['binary-search','binary-tree','dynamic-programming'],
+},
+{
+  id: 'greedy', name: 'Greedy', group: 'algorithms', level: 'core',
+  one: 'Making the locally optimal choice at each step with the expectation of finding a global optimum, without ever rethinking past decisions.',
+  ops: [['Single greedy choice','O(1)'],['Sort input (often needed)','O(n log n)'],['Heap-driven greedy choice','O(log n)'],['Overall pass','O(n) or O(n log n)']],
+  use: ['Interval scheduling and resource allocation','Shortest path (Dijkstra) and Minimum Spanning Tree (Kruskal, Prim)','Data compression (Huffman coding) and fractional knapsack'],
+  patterns: ['Sort by end time or deadline first','Priority queue / min-heap for dynamic minimum choices','Two pointers greedy pairing','Exchange argument to prove greedy choice property'],
+  problems: ['Jump Game','Gas Station','Non-overlapping Intervals','Task Scheduler','Assign Cookies','Candy'],
+  pitfalls: ['Assuming greedy works when current choices constrain future options (requires DP)','Sorting by start time instead of end time in interval scheduling','Overlooking tie-breaking edge cases'],
+  py: `def eraseOverlapIntervals(intervals):
+    intervals.sort(key=lambda x: x[1])
+    count, last_end = 0, float('-inf')
+    for start, end in intervals:
+        if start >= last_end:
+            last_end = end
+        else:
+            count += 1
+    return count`,
+  related: ['dynamic-programming','heap','array'],
+},
+{
+  id: 'backtracking', name: 'Backtracking', group: 'algorithms', level: 'good',
+  one: 'Building candidate solutions step-by-step and abandoning ("backtracking") a candidate as soon as it is clear it cannot produce a valid solution.',
+  ops: [['Choose candidate','O(1)'],['Validate constraints','O(1)'],['Unchoose / backtrack','O(1)'],['Search space','O(k^n) or O(n!)']],
+  use: ['Generating permutations, combinations, and power sets','Constraint satisfaction puzzles (Sudoku, N-Queens, Word Search)','Finding paths in a grid or graph with obstacle constraints'],
+  patterns: ['Template: choose -> recurse -> unchoose','Pruning branches early to cut off exponential dead-ends','Handling duplicates with sorting + adjacent element check','State passing via path list or bitmask'],
+  problems: ['Subsets','Permutations','Combination Sum','N-Queens','Word Search','Sudoku Solver'],
+  pitfalls: ['Forgetting to undo state changes (unchoose) before returning','Passing mutable state without copying when recording solutions','Not pruning early enough, causing time limit exceeded (TLE)'],
+  py: `def subsets(nums):
+    res, path = [], []
+    def dfs(start):
+        res.append(list(path))
+        for i in range(start, len(nums)):
+            path.append(nums[i])
+            dfs(i + 1)
+            path.pop()  # backtrack
+    dfs(0)
+    return res`,
+  related: ['dynamic-programming','graph','binary-tree'],
+},
+{
+  id: 'dynamic-programming', name: 'Dynamic Programming', group: 'algorithms', level: 'core',
+  one: 'Breaking complex optimization problems into overlapping subproblems, solving each once, and storing results in a table to avoid redundant work.',
+  ops: [['State lookup / cache hit','O(1)'],['Compute single state','O(transitions)'],['Fill 1D table','O(n)'],['Fill 2D table','O(n · m)'],['State compression space','O(n) or O(1)']],
+  use: ['Overlapping subproblems and optimal substructure','Min/max optimization, path counting, and feasibility checks','Greedy fails because earlier decisions affect future choices'],
+  patterns: ['Memoization (top-down recursion with cache)','Tabulation (bottom-up iteration)','Space optimization (rolling array, keep only last row)','0/1 Knapsack & Unbounded Knapsack','Longest Common Subsequence & Longest Increasing Subsequence'],
+  problems: ['Climbing Stairs','Coin Change','Longest Increasing Subsequence','0/1 Knapsack','Word Break','Edit Distance'],
+  pitfalls: ['Missing base cases or array offset errors','Using DP when a simpler greedy or two-pointer approach suffices','Unbounded memory when state space is unnecessarily large'],
+  py: `def coinChange(coins, amount):
+    dp = [float('inf')] * (amount + 1)
+    dp[0] = 0
+    for a in range(1, amount + 1):
+        for c in coins:
+            if a >= c:
+                dp[a] = min(dp[a], 1 + dp[a - c])
+    return dp[amount] if dp[amount] != float('inf') else -1`,
+  related: ['greedy','backtracking','array','grid'],
 },
 ];

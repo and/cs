@@ -581,6 +581,132 @@ export function renderViz(id) {
         </g>
       </svg>`;
 
+    case 'binary-search':
+      return `<svg viewBox="0 0 340 105" fill="none" xmlns="http://www.w3.org/2000/svg">
+        ${defs}
+        <text x="170" y="14" text-anchor="middle" font-size="9" fill="var(--c, #D97706)" letter-spacing="0.06em">DIVIDE SEARCH SPACE IN HALF · O(log n)</text>
+        <g transform="translate(18, 28)">
+          ${[2, 7, 11, 15, 23, 31, 45, 56].map((val, idx) => {
+            const isLeft = idx < 3;
+            const isMid = idx === 3;
+            const fill = isMid ? 'var(--c, #D97706)' : isLeft ? 'var(--mute)' : 'currentColor';
+            const fillOp = isMid ? '0.2' : isLeft ? '0.02' : '0.04';
+            const stroke = isMid ? 'var(--c, #D97706)' : 'var(--line)';
+            const textFill = isMid ? 'var(--c, #D97706)' : isLeft ? 'var(--mute)' : 'currentColor';
+            return `
+              <rect x="${idx * 38}" y="8" width="34" height="28" rx="4" stroke="${stroke}" stroke-width="${isMid ? '1.8' : '1.2'}" fill="${fill}" fill-opacity="${fillOp}" />
+              <text x="${idx * 38 + 17}" y="26" text-anchor="middle" font-size="11" font-weight="${isMid ? '700' : '500'}" fill="${textFill}">${val}</text>
+            `;
+          }).join('')}
+          <text x="17" y="52" text-anchor="middle" font-size="10" font-weight="700" fill="var(--mute)">L</text>
+          <line x1="131" y1="48" x2="131" y2="38" stroke="var(--c, #D97706)" stroke-width="1.6" marker-end="url(#arr-c)" />
+          <text x="131" y="60" text-anchor="middle" font-size="10" font-weight="700" fill="var(--c, #D97706)">MID (15)</text>
+          <text x="283" y="52" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor">R</text>
+        </g>
+      </svg>`;
+
+    case 'divide-and-conquer':
+      return `<svg viewBox="0 0 340 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+        ${defs}
+        <rect x="110" y="8" width="120" height="24" rx="4" stroke="var(--c, #D97706)" stroke-width="1.6" fill="var(--c, #D97706)" fill-opacity="0.12" />
+        <text x="170" y="24" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--c, #D97706)">Problem (size n)</text>
+
+        <line x1="145" y1="34" x2="85" y2="48" stroke="var(--line)" stroke-width="1.4" marker-end="url(#arr)" />
+        <line x1="195" y1="34" x2="255" y2="48" stroke="var(--line)" stroke-width="1.4" marker-end="url(#arr)" />
+        <text x="170" y="44" text-anchor="middle" font-size="8.5" fill="var(--mute)">DIVIDE</text>
+
+        <rect x="35" y="50" width="100" height="22" rx="4" stroke="var(--line)" stroke-width="1.2" fill="currentColor" fill-opacity="0.03" />
+        <text x="85" y="65" text-anchor="middle" font-size="9.5" fill="currentColor">Subproblem (n/2)</text>
+
+        <rect x="205" y="50" width="100" height="22" rx="4" stroke="var(--line)" stroke-width="1.2" fill="currentColor" fill-opacity="0.03" />
+        <text x="255" y="65" text-anchor="middle" font-size="9.5" fill="currentColor">Subproblem (n/2)</text>
+
+        <line x1="85" y1="74" x2="145" y2="88" stroke="var(--c, #D97706)" stroke-width="1.4" marker-end="url(#arr-c)" />
+        <line x1="255" y1="74" x2="195" y2="88" stroke="var(--c, #D97706)" stroke-width="1.4" marker-end="url(#arr-c)" />
+        <text x="170" y="84" text-anchor="middle" font-size="8.5" font-weight="600" fill="var(--c, #D97706)">COMBINE</text>
+
+        <rect x="115" y="90" width="110" height="20" rx="4" stroke="var(--c, #D97706)" stroke-width="1.4" fill="var(--c, #D97706)" fill-opacity="0.1" />
+        <text x="170" y="104" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--c, #D97706)">Merged Solution</text>
+      </svg>`;
+
+    case 'greedy':
+      return `<svg viewBox="0 0 340 105" fill="none" xmlns="http://www.w3.org/2000/svg">
+        ${defs}
+        <text x="170" y="14" text-anchor="middle" font-size="9" fill="var(--c, #D97706)" letter-spacing="0.06em">LOCALLY OPTIMAL CHOICE AT EACH STEP</text>
+        <g transform="translate(25, 26)">
+          <line x1="0" y1="56" x2="290" y2="56" stroke="var(--line)" stroke-width="1.2" />
+
+          <rect x="10" y="8" width="60" height="18" rx="3" stroke="var(--c, #D97706)" stroke-width="1.6" fill="var(--c, #D97706)" fill-opacity="0.2" />
+          <text x="40" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="var(--c, #D97706)">Picked ✓</text>
+
+          <rect x="45" y="32" width="75" height="18" rx="3" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="2 2" fill="currentColor" fill-opacity="0.02" />
+          <text x="82" y="45" text-anchor="middle" font-size="8.5" fill="var(--mute)">Overlap ✕</text>
+
+          <rect x="130" y="8" width="70" height="18" rx="3" stroke="var(--c, #D97706)" stroke-width="1.6" fill="var(--c, #D97706)" fill-opacity="0.2" />
+          <text x="165" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="var(--c, #D97706)">Picked ✓</text>
+
+          <rect x="215" y="8" width="65" height="18" rx="3" stroke="var(--c, #D97706)" stroke-width="1.6" fill="var(--c, #D97706)" fill-opacity="0.2" />
+          <text x="247" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="var(--c, #D97706)">Picked ✓</text>
+        </g>
+      </svg>`;
+
+    case 'backtracking':
+      return `<svg viewBox="0 0 340 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+        ${defs}
+        <circle cx="170" cy="18" r="12" stroke="var(--line)" stroke-width="1.5" fill="currentColor" fill-opacity="0.04" />
+        <text x="170" y="22" text-anchor="middle" font-size="9.5" font-weight="600" fill="currentColor">[]</text>
+
+        <line x1="158" y1="28" x2="95" y2="52" stroke="var(--line)" stroke-width="1.4" />
+        <line x1="182" y1="28" x2="245" y2="52" stroke="var(--line)" stroke-width="1.4" />
+
+        <circle cx="95" cy="56" r="13" stroke="var(--c, #D97706)" stroke-width="1.6" fill="var(--c, #D97706)" fill-opacity="0.14" />
+        <text x="95" y="60" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--c, #D97706)">[1]</text>
+
+        <circle cx="245" cy="56" r="13" stroke="var(--line)" stroke-width="1.2" fill="currentColor" fill-opacity="0.04" />
+        <text x="245" y="60" text-anchor="middle" font-size="9.5" fill="currentColor">[2]</text>
+
+        <line x1="85" y1="68" x2="55" y2="92" stroke="var(--line)" stroke-width="1.2" />
+        <line x1="105" y1="68" x2="135" y2="92" stroke="var(--line)" stroke-width="1.2" />
+
+        <rect x="30" y="88" width="50" height="20" rx="4" stroke="var(--c, #D97706)" stroke-width="1.4" fill="var(--c, #D97706)" fill-opacity="0.14" />
+        <text x="55" y="102" text-anchor="middle" font-size="9" font-weight="700" fill="var(--c, #D97706)">[1,2] ✓</text>
+
+        <rect x="110" y="88" width="50" height="20" rx="4" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="2 2" fill="currentColor" fill-opacity="0.02" />
+        <text x="135" y="102" text-anchor="middle" font-size="9" fill="var(--mute)">[1,3] ✕</text>
+
+        <path d="M155,92 Q175,70 115,62" stroke="var(--c, #D97706)" stroke-width="1.5" stroke-dasharray="3 2" fill="none" marker-end="url(#arr-c)" />
+        <text x="195" y="78" text-anchor="middle" font-size="8.5" font-weight="600" fill="var(--c, #D97706)">undo / backtrack</text>
+      </svg>`;
+
+    case 'dynamic-programming':
+      return `<svg viewBox="0 0 340 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        ${defs}
+        <text x="170" y="14" text-anchor="middle" font-size="9" fill="var(--c, #D97706)" letter-spacing="0.06em">OVERLAPPING SUBPROBLEMS CACHED IN TABLE</text>
+        <g transform="translate(60, 24)">
+          <rect x="0" y="0" width="130" height="66" rx="6" stroke="var(--line)" stroke-width="1.4" fill="currentColor" fill-opacity="0.02" />
+          <line x1="0" y1="22" x2="130" y2="22" stroke="var(--line)" stroke-width="1" />
+          <line x1="0" y1="44" x2="130" y2="44" stroke="var(--line)" stroke-width="1" />
+          <line x1="43" y1="0" x2="43" y2="66" stroke="var(--line)" stroke-width="1" />
+          <line x1="86" y1="0" x2="86" y2="66" stroke="var(--line)" stroke-width="1" />
+
+          <rect x="86" y="44" width="44" height="22" rx="3" stroke="var(--c, #D97706)" stroke-width="1.8" fill="var(--c, #D97706)" fill-opacity="0.2" />
+          <text x="108" y="59" text-anchor="middle" font-size="9" font-weight="700" fill="var(--c, #D97706)">dp[i][j]</text>
+
+          <rect x="86" y="22" width="44" height="22" rx="2" fill="var(--c, #D97706)" fill-opacity="0.08" />
+          <line x1="108" y1="36" x2="108" y2="44" stroke="var(--c, #D97706)" stroke-width="1.4" marker-end="url(#arr-c)" />
+
+          <rect x="43" y="22" width="43" height="22" rx="2" fill="var(--c, #D97706)" fill-opacity="0.08" />
+          <line x1="75" y1="38" x2="92" y2="48" stroke="var(--c, #D97706)" stroke-width="1.4" marker-end="url(#arr-c)" />
+        </g>
+        <g transform="translate(205, 36)">
+          <text x="0" y="16" font-size="9.5" font-weight="700" fill="currentColor">Transition:</text>
+          <text x="0" y="32" font-size="8.5" fill="var(--mute)">dp[i][w] = max(</text>
+          <text x="10" y="46" font-size="8" fill="var(--c, #D97706)">dp[i-1][w],</text>
+          <text x="10" y="58" font-size="8" fill="var(--c, #D97706)">val + dp[i-1][w-wt]</text>
+          <text x="0" y="70" font-size="8.5" fill="var(--mute)">)</text>
+        </g>
+      </svg>`;
+
     default:
       return '';
   }

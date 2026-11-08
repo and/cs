@@ -1,14 +1,14 @@
-# DS/Map: data structures, mapped
+# DS/Map: data structures & algorithms, mapped
 
-A 3D map of 19 data structures for coding-interview prep. Each structure is a cluster that branches into:
+A 3D map of 24 core data structures and algorithms. Each topic is a cluster that branches into:
 
 - **Operations & cost**: time complexity of each operation
 - **Use it when**: situations where it's the right choice
-- **Patterns**: the techniques interviewers test
-- **Practice problems**: linked to a LeetCode search
+- **Patterns**: standard patterns and algorithmic techniques
+- **Practice problems**: linked to problem searches
 - **Pitfalls**: common mistakes
 
-Every structure also has a short Python snippet and links to related structures.
+Every topic also has a short Python snippet and links to related topics.
 
 ## Features
 
@@ -18,8 +18,8 @@ Every structure also has a short Python snippet and links to related structures.
 - "Mark as understood" progress, saved in your browser
 - Each structure has its own link, for example `index.html#heap`
 - List view for reading rather than exploring in 3D
-- **Play tour**: a slow, film-like walk through all 19 structures with captions and section highlights. Use pause, prev/next, speed (0.5×–2×), and toggles to hide the side panel (`P`) or captions (`C`)
-- **Dark mode** (`D`) with glowing nodes and a starfield, plus fullscreen (`F`). During the tour, controls and the cursor fade out after 3 seconds, so it works well on a TV
+- **Play tour & Topic loop**: a slow, film-like walk through all 24 topics or loop through a single topic continuously. Use pause, prev/next, speed (0.5×–2×), and toggles to hide the side panel (`P`) or captions (`C`)
+- **Dark mode** (`D`) with glowing nodes, plus fullscreen (`F`). During the tour, controls and the cursor fade out after 3 seconds, so it works well on a TV
 
 Keyboard: `/` search · `Space` play/pause · `← →` previous/next · `Esc` stop or close · `D` dark mode · `F` fullscreen
 

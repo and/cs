@@ -29,7 +29,7 @@ const saveDone = () => { try { localStorage.setItem('dsmap-done', JSON.stringify
 function renderProgress() { document.getElementById('progress').innerHTML = `<b>${done.size}</b> / ${DS.length} understood`; }
 
 // ---------- layout: where each structure's cluster sits ----------
-const GROUP_CENTER = { linear: [-400, 10, 40], hashing: [-110, 170, -120], trees: [190, -40, 70], graphs: [470, 110, -60], range: [300, -250, -190] };
+const GROUP_CENTER = { linear: [-400, 10, 40], hashing: [-110, 170, -120], trees: [190, -40, 70], graphs: [470, 110, -60], range: [300, -250, -190], algorithms: [-150, -220, 100] };
 const CENTERS = (() => {
   const R = rng('layout-v3'), placed = [], out = [];
   for (const d of DS) {
@@ -558,7 +558,10 @@ const INDEX = nodes.map((nd, n) => {
 // aliases so common words find the right structure
 const ALIAS = { 'hash-map': 'dictionary dict hashtable hash table map', 'hash-set': 'set', 'heap': 'priority queue pq min-heap max-heap heapq',
   'union-find': 'disjoint set dsu', 'trie': 'prefix tree', 'grid': 'matrix 2d board', 'bst': 'binary search tree', 'fenwick-tree': 'binary indexed tree bit',
-  'lru-cache': 'cache ordereddict', 'deque': 'double ended queue', 'balanced-bst': 'avl red black treemap sortedlist', 'array': 'list' };
+  'lru-cache': 'cache ordereddict', 'deque': 'double ended queue', 'balanced-bst': 'avl red black treemap sortedlist', 'array': 'list',
+  'dynamic-programming': 'dp memoization tabulation knapsack', 'binary-search': 'bisect bsearch lower bound upper bound',
+  'greedy': 'interval scheduling greedy choice', 'backtracking': 'dfs state space tree pruning permutations',
+  'divide-and-conquer': 'd&c merge sort quick sort master theorem' };
 INDEX.forEach((it) => { if (it.kind === 0) it.alias = ALIAS[DS[nodes[it.n].bi].id] || ''; });
 const fold = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 INDEX.forEach((it) => { it.ft = fold(it.title); it.fs = fold(it.sub); it.fa = fold(it.alias || ''); });
