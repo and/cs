@@ -1,5 +1,5 @@
-import { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS } from './dsa_data.js';
-export { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS };
+import { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS, DSA_BRANCH_INFO } from './dsa_data.js';
+export { DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS, DSA_BRANCH_INFO };
 
 export const GROUPS = {
   foundations: { name: 'Foundations',        color: '#3B6FE0' },

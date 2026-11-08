@@ -4,7 +4,58 @@ export const DSA_GROUPS = {
   trees:      { name: 'Trees & heaps', color: '#2E9E6A' },
   graphs:     { name: 'Graphs',        color: '#8A4FD8' },
   range:      { name: 'Range queries', color: '#D9447A' },
-  algorithms: { name: 'Algorithms',    color: '#D97706' },
+  algorithms: { name: 'Algorithms',    color: '#0EA5E9' },
+};
+
+export const DSA_BRANCH_INFO = {
+  linear: {
+    name: 'Linear Layouts',
+    groupName: 'Linear',
+    color: '#3B6FE0',
+    summary: 'Sequential memory arrangements where elements follow a linear order. Covers contiguous buffers and node-linked chains.',
+    concept: 'Contiguous arrays provide instant O(1) indexed random access and CPU cache locality, while linked lists and deques allow O(1) dynamic insertion and deletion without buffer copying.',
+    tradeoffs: 'Random access: Array O(1) vs LinkedList O(n) · Insertion at head: Array O(n) vs LinkedList/Deque O(1).',
+  },
+  hashing: {
+    name: 'Hashing & Caches',
+    groupName: 'Hashing',
+    color: '#E0703B',
+    summary: 'Direct-addressing data structures mapping keys to values using hash functions, achieving expected O(1) time complexity.',
+    concept: 'Hash functions convert arbitrary keys into array bucket indices. Collisions are resolved via chaining or open addressing. Cache eviction policies (like LRU) combine hash maps with doubly-linked lists.',
+    tradeoffs: 'Lookup: O(1) average vs O(n) worst-case under extreme collision · Space overhead: requires sparse load factor (< 0.75).',
+  },
+  trees: {
+    name: 'Trees & Heaps',
+    groupName: 'Trees & heaps',
+    color: '#2E9E6A',
+    summary: 'Hierarchical node relationships rooted at a single top node. Engineered for sorted searches, priority queues, and prefix trees.',
+    concept: 'Binary Search Trees maintain ordered elements for O(log n) search. Balanced trees (AVL, Red-Black) prevent O(n) degeneration. Binary Heaps enforce the heap property for O(1) min/max peek. Tries store re-trievable character paths.',
+    tradeoffs: 'Search: O(log n) balanced vs O(n) unbalanced · Min/Max access: Heap O(1) vs BST O(log n).',
+  },
+  graphs: {
+    name: 'Graphs & Networks',
+    groupName: 'Graphs',
+    color: '#8A4FD8',
+    summary: 'Collections of vertices (nodes) connected by edges (relationships, transitions, or weights).',
+    concept: 'Models dependencies, social networks, shortest paths, and circuit routing. Represented as Adjacency Lists (sparse) or Adjacency Matrices (dense). Traversals include BFS (shortest path) and DFS (cycle detection, topological sort).',
+    tradeoffs: 'Adjacency list: O(V + E) memory, O(deg) edge query · Adjacency matrix: O(V²) memory, O(1) edge query.',
+  },
+  range: {
+    name: 'Range Queries',
+    groupName: 'Range queries',
+    color: '#D9447A',
+    summary: 'Specialized tree structures engineered to perform dynamic range queries and point/interval updates in logarithmic time.',
+    concept: 'Prefix sums allow O(1) static range sum queries but require O(n) for point updates. Fenwick Trees (BIT) balance both in O(log n) with minimal memory. Segment Trees support arbitrary associative operations (min, max, gcd) and lazy propagation in O(log n).',
+    tradeoffs: 'Fenwick Tree: O(n) memory, simpler code · Segment Tree: O(4n) memory, supports range updates and complex aggregates.',
+  },
+  algorithms: {
+    name: 'Algorithmic Paradigms',
+    groupName: 'Algorithms',
+    color: '#0EA5E9',
+    summary: 'Foundational algorithmic strategies used to solve complex computational problems by breaking them into manageable parts.',
+    concept: 'Binary Search cuts search space by half each step. Divide & Conquer breaks problems into independent subproblems. Greedy makes locally optimal choices. Dynamic Programming caches overlapping subproblems to turn exponential time into polynomial time.',
+    tradeoffs: 'Time vs Space: Dynamic Programming trades O(n) memory to avoid 2ⁿ recalculations · Local vs Global: Greedy is fast O(n log n) but only works for optimal substructure.',
+  },
 };
 
 export const DSA_BRANCHES = [

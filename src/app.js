@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DS, GROUPS, BRANCHES, LEVELS, ORDER, DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS } from './data.js';
+import { DS, GROUPS, BRANCHES, LEVELS, ORDER, DSA_TOPICS, DSA_GROUPS, DSA_ORDER, DSA_BRANCHES, DSA_LEVELS, DSA_BRANCH_INFO } from './data.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { renderViz } from './viz.js';
 
@@ -699,6 +699,72 @@ function renderPanel(bi) {
     return;
   }
 
+  // If viewing a DSA branch (Linear, Hashing, Trees & heaps, Graphs, Range queries, Algorithms):
+  if (bi === 0 && selectedBranch >= 0 && !selectedDsaTopic && d.dsaBranches && d.dsaBranches[selectedBranch]) {
+    const bObj = d.dsaBranches[selectedBranch];
+    const bInfo = DSA_BRANCH_INFO[bObj.key] || { name: bObj.name, summary: '', concept: '', tradeoffs: '' };
+    const subTopics = (bObj.ids || []).map((id) => DSA_TOPICS.find((t) => t.id === id)).filter(Boolean);
+
+    panel.innerHTML = `
+      <div class="p-top">
+        <button class="dsa-back-btn" data-act="dsa-overview" title="Back to High-Level DSA Overview">← Back to Overview</button>
+        <span class="pill" style="--c:${bObj.color}">${esc(bObj.name)}</span>
+        <span class="lvl">Branch ${selectedBranch + 1} of ${d.dsaBranches.length}</span>
+        <button class="x" data-act="close" aria-label="Close">✕</button>
+      </div>
+
+      <h2>${esc(bInfo.name || bObj.name)}</h2>
+      <p class="one">${esc(bInfo.summary)}</p>
+
+      <div style="border-left: 3px solid ${bObj.color}; background: rgba(0,0,0,.025); padding: 12px 14px; border-radius: 8px; margin: 14px 0;">
+        <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--mute); letter-spacing: .05em; margin-bottom: 4px;">Core Mechanism</div>
+        <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--ink);">${esc(bInfo.concept)}</p>
+        <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--mute); letter-spacing: .05em; margin-bottom: 4px;">Tradeoffs &amp; Complexity</div>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--mute); font-family: monospace;">${esc(bInfo.tradeoffs)}</p>
+      </div>
+
+      <div class="dsa-sub-header" style="margin-top: 18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <h3 style="margin:0;"><i style="background:${bObj.color}"></i>${esc(bObj.name)} Topics (${subTopics.length})</h3>
+          <span style="font-size:11.5px; color:var(--mute);">Click any topic to view code &amp; Big-O</span>
+        </div>
+        <div class="dsa-sub-tabs">
+          <button class="dsa-tab" data-dsa-tab="all">All (24)</button>
+          ${d.dsaBranches.map((br) => `
+            <button class="dsa-tab ${br.key === bObj.key ? 'act' : ''}" data-dsa-tab="${br.key}">
+              <i style="background:${br.color}"></i>${esc(br.name)} (${br.ids.length})
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="dsa-grid" id="dsaGrid">
+        ${subTopics.map((t) => {
+          const topOp = t.ops && t.ops[0] ? `${t.ops[0][0]}: ${t.ops[0][1]}` : '';
+          return `
+            <button class="dsa-card" data-dsa-sub="${t.id}" data-group="${t.group}">
+              <div class="dsa-card-top">
+                <span class="dsa-card-dot" style="background:${DSA_GROUPS[t.group].color}"></span>
+                <span class="dsa-card-name">${esc(t.name)}</span>
+                ${done.has(t.id) ? '<span class="done">✓</span>' : ''}
+              </div>
+              <p class="dsa-card-desc">${esc(t.one)}</p>
+              ${topOp ? `<div style="margin-top: 6px; font-size: 11px; font-family: monospace; color: #2563eb; font-weight: 600;">${esc(topOp)}</div>` : ''}
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="nav" style="margin-top: 24px;">
+        <button data-act="prev-branch">← Previous Branch</button>
+        <span>Branch ${selectedBranch + 1} / ${d.dsaBranches.length}</span>
+        <button data-act="next-branch">Next Branch →</button>
+      </div>
+    `;
+    panel.scrollTop = 0;
+    return;
+  }
+
   // Otherwise, render the High-Level CS field view:
   const renderCore = (B) => `
     <h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
@@ -789,33 +855,56 @@ panel.addEventListener('click', async (e) => {
   }
   const dsaTab = e.target.closest('[data-dsa-tab]');
   if (dsaTab) {
-    activeDsaTab = dsaTab.dataset.dsaTab;
-    panel.querySelectorAll('.dsa-tab').forEach((t) => t.classList.toggle('act', t.dataset.dsaTab === activeDsaTab));
-    const grid = panel.querySelector('#dsaGrid');
-    if (grid) {
-      grid.querySelectorAll('.dsa-card').forEach((card) => {
-        const matches = activeDsaTab === 'all' || card.dataset.group === activeDsaTab;
-        card.style.display = matches ? '' : 'none';
-      });
-    }
-    if (activeDsaTab !== 'all') {
-      const bIdx = brains[0]?.curBranches?.findIndex((B) => B.key === activeDsaTab);
+    const tabKey = dsaTab.dataset.dsaTab;
+    activeDsaTab = tabKey;
+    if (tabKey === 'all') {
+      selectedBranch = -1;
+      selectedLeaf = -1;
+      selectedDsaTopic = null;
+      renderPanel(0);
+      focusCam(0, 800);
+    } else {
+      const bIdx = DS[0].dsaBranches.findIndex((B) => B.key === tabKey);
       if (bIdx >= 0) {
         selectedBranch = bIdx;
         selectedLeaf = -1;
-        const bn = brains[0].branchIdx[bIdx];
-        const set = new Set([bn]);
-        for (let k = brains[0].first; k < brains[0].first + brains[0].count; k++) {
-          if (nodes[k].kind === 'leaf' && nodes[k].branch === bIdx) set.add(k);
-        }
-        pulse.set = set; pulse.until = performance.now() + 2500;
+        selectedDsaTopic = null;
+        renderPanel(0);
         focusBranch(0, bIdx, 800);
       }
-    } else {
-      selectedBranch = -1;
-      selectedLeaf = -1;
-      focusCam(0, 800);
     }
+    return;
+  }
+  const dsaOverviewBtn = e.target.closest('[data-act="dsa-overview"]');
+  if (dsaOverviewBtn) {
+    selectedBranch = -1;
+    selectedLeaf = -1;
+    selectedDsaTopic = null;
+    activeDsaTab = 'all';
+    renderPanel(0);
+    focusCam(0, 800);
+    return;
+  }
+  const nextBranchBtn = e.target.closest('[data-act="next-branch"]');
+  if (nextBranchBtn) {
+    const num = DS[0].dsaBranches.length;
+    selectedBranch = (selectedBranch + 1) % num;
+    selectedLeaf = -1;
+    selectedDsaTopic = null;
+    activeDsaTab = DS[0].dsaBranches[selectedBranch].key;
+    highlightCurrentNode(true);
+    renderPanel(0);
+    return;
+  }
+  const prevBranchBtn = e.target.closest('[data-act="prev-branch"]');
+  if (prevBranchBtn) {
+    const num = DS[0].dsaBranches.length;
+    selectedBranch = (selectedBranch - 1 + num) % num;
+    selectedLeaf = -1;
+    selectedDsaTopic = null;
+    activeDsaTab = DS[0].dsaBranches[selectedBranch].key;
+    highlightCurrentNode(true);
+    renderPanel(0);
     return;
   }
   const backBtn = e.target.closest('[data-act="dsa-back"]');
@@ -879,7 +968,11 @@ function highlightCurrentNode(fly = true) {
     if (fly) focusBranch(selected, selectedBranch, 800);
     const curB = brains[selected].curBranches;
     const bObj = curB ? curB[selectedBranch] : BRANCHES[selectedBranch];
-    if (panel.classList.contains('open') && bObj) {
+    if (selected === 0 && bObj) {
+      activeDsaTab = bObj.key;
+      selectedDsaTopic = null;
+      renderPanel(0);
+    } else if (panel.classList.contains('open') && bObj) {
       const h = panel.querySelector(`[data-sec="${bObj.key}"]`);
       if (h) {
         panel.scrollTo({ top: Math.max(0, h.offsetTop - 18), behavior: 'smooth' });
@@ -1048,11 +1141,19 @@ function select(bi, node = null, opts = {}) {
     selectedBranch = node.branch;
     selectedLeaf = -1;
     selectedDsaTopic = null;
+    if (bi === 0) {
+      const curB = brains[0]?.curBranches || DS[0].dsaBranches;
+      if (curB && curB[node.branch]) {
+        activeDsaTab = curB[node.branch].key;
+      }
+    }
   } else if (node.kind === 'leaf') {
     selectedBranch = node.branch;
     selectedLeaf = node.item;
     if (node.dsaTopicId) {
       selectedDsaTopic = node.dsaTopicId;
+      const sub = DSA_TOPICS.find((t) => t.id === node.dsaTopicId);
+      if (sub) activeDsaTab = sub.group;
     }
   }
   document.body.classList.add('exploring');
@@ -1073,6 +1174,7 @@ function select(bi, node = null, opts = {}) {
       }
     }
     if (node.kind === 'branch') {
+      focusBranch(bi, node.branch, 800);
       const bn = brains[bi].branchIdx[node.branch];
       const p = project(bn);
       showTip(bn, p.x, p.y);
