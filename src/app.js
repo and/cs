@@ -192,7 +192,12 @@ function step(t) {
     if (activeCategory !== 'all' && DS[b].group !== activeCategory) {
       rs *= .65; // scale down non-matching category nodes
     }
-    if (pulse.until > performance.now() && pulse.set.has(n)) rs *= (nd.kind === 'leaf' ? 1.35 : 1.6) + .45 * Math.sin(performance.now() / 140);
+    const isSelectedLeaf = selected === nd.bi && selectedBranch === nd.branch && selectedLeaf === nd.item;
+    if (isSelectedLeaf) {
+      rs = 5.2 + 1.2 * Math.sin(performance.now() / 160);
+    } else if (pulse.until > performance.now() && pulse.set.has(n)) {
+      rs *= (nd.kind === 'leaf' ? 1.35 : 1.6) + .45 * Math.sin(performance.now() / 140);
+    }
     _m.makeScale(rs, rs, rs).setPosition(_v); mesh.setMatrixAt(n, _m);
   }
   mesh.instanceMatrix.needsUpdate = true;
@@ -234,11 +239,21 @@ function fadeFor(bi) {
 }
 
 function paint() {
-  const key = selected + ':' + hovered + ':' + activeCategory;
+  const key = selected + ':' + hovered + ':' + activeCategory + ':' + selectedBranch + ':' + selectedLeaf;
   if (key === paintKey) return;
   paintKey = key;
   const f = brains.map((_, i) => fadeFor(i));
-  for (let n = 0; n < N; n++) mesh.setColorAt(n, _c.copy(baseCol[n]).lerp(BGC, f[nodes[n].bi]));
+  for (let n = 0; n < N; n++) {
+    const nd = nodes[n];
+    const isSelectedLeaf = selected === nd.bi && selectedBranch === nd.branch && selectedLeaf === nd.item;
+    if (isSelectedLeaf) {
+      const curB = brains[nd.bi]?.curBranches || BRANCHES;
+      const bColor = curB[nd.branch]?.color || baseCol[n];
+      mesh.setColorAt(n, _c.set(bColor));
+    } else {
+      mesh.setColorAt(n, _c.copy(baseCol[n]).lerp(BGC, f[nd.bi]));
+    }
+  }
   mesh.instanceColor.needsUpdate = true;
   for (const gl of glows) {
     const arr = gl.geometry.attributes.color.array, idx = gl.userData.idx, k0 = gl === glows[0] ? .55 : .32;
@@ -260,7 +275,12 @@ function paint() {
     _c.copy(MID).lerp(BGC, kind === 'rel' ? Math.max(.6, f[nodes[a].bi]) : f[nodes[a].bi]).toArray(mCol, 3 * e);
   }
   eGeo.attributes.color.needsUpdate = true; mGeo.attributes.color.needsUpdate = true;
-  labelEls.forEach((el, i) => { el.classList.toggle('sel', i === selected); el.classList.toggle('hov', i === hovered && i !== selected); });
+  const leafActive = selected >= 0 && selectedLeaf >= 0;
+  labelEls.forEach((el, i) => {
+    el.classList.toggle('sel', i === selected && !leafActive);
+    el.classList.toggle('parent-sel', i === selected && leafActive);
+    el.classList.toggle('hov', i === hovered && i !== selected);
+  });
 }
 
 // ---------- category filtering ----------
@@ -434,6 +454,16 @@ const branchEls = Array.from({ length: maxBranches }, (_, a) => {
   const el = document.createElement('div'); el.className = 'blbl'; el.textContent = BRANCHES[a]?.name || ''; el.style.color = BRANCHES[a]?.color || '#888';
   el.style.visibility = 'hidden'; labelsEl.appendChild(el); return el;
 });
+const leafLabelEl = document.createElement('div');
+leafLabelEl.className = 'lbl sel leaf-lbl';
+leafLabelEl.style.visibility = 'hidden';
+leafLabelEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selected >= 0 && selectedBranch >= 0 && selectedLeaf >= 0) {
+    focusLeaf(selected, selectedBranch, selectedLeaf, 600);
+  }
+});
+labelsEl.appendChild(leafLabelEl);
 function refreshChecks() { labelEls.forEach((el, i) => el.querySelector('.ck').textContent = done.has(DS[i].id) ? '✓' : ''); }
 const _dir = new THREE.Vector3(), _p = new THREE.Vector3(), _t = new THREE.Vector3();
 const FOCAL = () => innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(25));
@@ -485,6 +515,42 @@ function updateLabels() {
     el.style.visibility = 'visible';
     el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
   });
+
+  // Highlighted leaf badge
+  if (selected >= 0 && selectedBranch >= 0 && selectedLeaf >= 0) {
+    const b = brains[selected];
+    const leaves = b.leafIdx[selectedBranch] || [];
+    const ln = leaves[selectedLeaf];
+    if (ln !== undefined) {
+      const p = project(ln);
+      if (p.depth >= 8) {
+        const nd = nodes[ln];
+        const curB = b.curBranches || BRANCHES;
+        const bObj = curB[selectedBranch];
+        const dotColor = bObj ? bObj.color : '#3B6FE0';
+        let leafName = '';
+        if (nd.dsaTopicId) {
+          const sub = DSA_TOPICS.find((t) => t.id === nd.dsaTopicId);
+          leafName = sub ? sub.name : nd.dsaTopicId;
+        } else {
+          leafName = nd.text ? nd.text.split(':')[0] : 'Item';
+        }
+        leafLabelEl.innerHTML = `<span class="dot" style="background:${dotColor}"></span><span>${esc(leafName)}</span><span class="ck">${done.has(nd.dsaTopicId || '') ? '✓' : ''}</span>`;
+        const us = uiScale();
+        const fs = Math.max(12, Math.min(18, 3800 / Math.max(p.depth, 1))) * us;
+        const rpx = 5.5 * F / p.depth;
+        leafLabelEl.style.fontSize = fs.toFixed(1) + 'px';
+        leafLabelEl.style.transform = `translate(${(p.x + rpx + 6).toFixed(1)}px,${(p.y - fs / 2).toFixed(1)}px)`;
+        leafLabelEl.style.visibility = 'visible';
+      } else {
+        leafLabelEl.style.visibility = 'hidden';
+      }
+    } else {
+      leafLabelEl.style.visibility = 'hidden';
+    }
+  } else {
+    leafLabelEl.style.visibility = 'hidden';
+  }
 }
 
 // ---------- picking ----------
