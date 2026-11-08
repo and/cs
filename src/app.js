@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { DS, GROUPS, BRANCHES, LEVELS, ORDER } from './data.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { renderViz } from './viz.js';
 
 
 
@@ -155,19 +156,7 @@ function makeGlow(idx, size) {
   p.frustumCulled = false; p.visible = false; p.userData.idx = idx; return p;
 }
 const glows = [makeGlow(coreIdx, 70), makeGlow(restIdx, 22)];
-const stars = (() => {
-  const R = rng('stars'), n = 1800, pos = new Float32Array(3 * n), col = new Float32Array(3 * n);
-  for (let i = 0; i < n; i++) {
-    const u = R() * 2 - 1, th = R() * Math.PI * 2, rr = 2600 + R() * 2400, s = Math.sqrt(1 - u * u);
-    pos[3 * i] = CLOUD.x + Math.cos(th) * s * rr; pos[3 * i + 1] = CLOUD.y + u * rr; pos[3 * i + 2] = CLOUD.z + Math.sin(th) * s * rr;
-    const b = .25 + .55 * R(); col[3 * i] = b * .85; col[3 * i + 1] = b * .9; col[3 * i + 2] = b;
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, depthWrite: false }));
-  p.visible = false; return p;
-})();
-scene.add(stars, ...glows);
+scene.add(...glows);
 
 // per-frame motion: each cluster drifts and wobbles slowly
 const world = new Float32Array(3 * N);
@@ -254,7 +243,7 @@ function applyTheme() {
   renderer.setClearColor(bg, 1); scene.fog.color.set(bg); BGC.set(bg);
   EDGE.set(dark ? '#2b2e45' : '#DCDCE4'); MID.set(dark ? '#5d6fa8' : '#A6BDEE'); REL.set(dark ? '#20223a' : '#E6E6EE');
   edgeTint = dark ? .32 : .18;
-  stars.visible = dark; glows.forEach((g) => g.visible = dark);
+  glows.forEach((g) => g.visible = dark);
   const tb = document.getElementById('themeBtn'); if (tb) tb.textContent = dark ? '☀ Light' : '☾ Dark';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
   paintKey = '';
@@ -435,12 +424,19 @@ function renderPanel(bi) {
   const list = (B) => `<h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
     <ul class="items" style="--c:${B.color}">${d[B.key].map((x, j) => `<li data-item="${B.key}-${j}">${B.key === 'problems'
       ? `<a href="https://leetcode.com/problemset/?search=${encodeURIComponent(x)}" target="_blank" rel="noopener">${esc(x)}</a>` : esc(x)}</li>`).join('')}</ul>`;
+  const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === bi || (auto.loopBi < 0 && STEPS[auto.i]?.bi === bi));
   panel.innerHTML = `
     <div class="p-top"><span class="pill" style="--c:${g.color}">${esc(g.name)}</span><span class="lvl">${esc(LEVELS[d.level])}</span>
       <button class="x" data-act="close" aria-label="Close">✕</button></div>
     <h2>${esc(d.name)}</h2>
     <p class="one">${esc(d.one)}</p>
-    <button class="learned ${isDone ? 'on' : ''}" data-act="learn">${isDone ? '✓ Understood' : 'Mark as understood'}</button>
+    <div class="ds-viz">${renderViz(d.id)}</div>
+    <div class="p-actions">
+      <button class="learned ${isDone ? 'on' : ''}" data-act="learn">${isDone ? '✓ Understood' : 'Mark as understood'}</button>
+      <button class="loop-topic-btn ${isLoopingThis ? 'on' : ''}" data-act="loop-topic" title="Loop all sections of ${esc(d.name)} continuously">
+        ${isLoopingThis && auto.playing ? '❚❚ Looping topic' : '▶ Play in loop'}
+      </button>
+    </div>
     <h3 data-sec="ops"><i style="background:${BRANCHES[0].color}"></i>Operations &amp; cost</h3>
     <table class="ops">${d.ops.map(([o, c], j) => `<tr data-item="ops-${j}"><td>${esc(o)}</td><td><span class="cx ${cxClass(c)}">${esc(c)}</span></td></tr>`).join('')}</table>
     ${BRANCHES.slice(1).map(list).join('')}
@@ -457,6 +453,14 @@ panel.addEventListener('click', async (e) => {
   const act = btn.dataset.act, d = DS[selected];
   if (act === 'close') { if (auto.active) setTourPanel(false); else deselect(); }
   else if (act === 'learn') { done.has(d.id) ? done.delete(d.id) : done.add(d.id); saveDone(); renderProgress(); refreshChecks(); renderPanel(selected); }
+  else if (act === 'loop-topic') {
+    if (auto.active && auto.loop === 'topic' && (auto.loopBi === selected || (auto.loopBi < 0 && STEPS[auto.i]?.bi === selected))) {
+      toggleAuto();
+    } else {
+      startTopicLoop(selected);
+    }
+    renderPanel(selected);
+  }
   else if ((act === 'next' || act === 'prev') && auto.active) autoJump(act === 'next' ? 1 : -1);
   else if (act === 'next' || act === 'prev') {
     const i = ORDER.indexOf(d.id), j = (i + (act === 'next' ? 1 : -1) + ORDER.length) % ORDER.length; select(byId[ORDER[j]]);
@@ -525,6 +529,7 @@ addEventListener('keydown', (e) => {
   if (e.key === '/') { e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if (e.key === ' ') { e.preventDefault(); auto.active ? toggleAuto() : startAuto(); return; }
   if (e.key === 'd' && !e.metaKey && !e.ctrlKey) { toggleTheme(); return; }
+  if (e.key === 'l' && !e.metaKey && !e.ctrlKey) { cycleLoopMode(); return; }
   if (auto.active && e.key === 'p') { setTourPanel(!auto.showPanel); return; }
   if (auto.active && e.key === 'c') { setTourCaps(!auto.showCaps); return; }
   if (e.key === 'f' && !e.metaKey && !e.ctrlKey) { toggleFullscreen(); return; }
@@ -627,12 +632,48 @@ ORDER.forEach((id) => {
   BRANCHES.forEach((B, a) => STEPS.push({ bi, br: a, dur: 3000 + 300 * Math.min(DS[bi][B.key].length, 6) }));
 });
 const SPEEDS = [.5, 1, 1.5, 2];
-const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true };
+const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true, loop: 'off', loopBi: -1 };
 try { auto.showPanel = localStorage.getItem('dsmap-tour-panel') !== 'off'; auto.showCaps = localStorage.getItem('dsmap-tour-caps') !== 'off'; } catch (e) {}
 const tourPanel = () => isWide() && auto.showPanel;
 const capEl = document.getElementById('caption'), playerEl = document.getElementById('player');
 const ppBtn = playerEl.querySelector('[data-p="toggle"]'), spdBtn = playerEl.querySelector('[data-p="speed"]');
 const pTitle = playerEl.querySelector('.pt'), pFill = playerEl.querySelector('.pbar i');
+
+function getTopicRange(bi) {
+  const start = STEPS.findIndex((s) => s.bi === bi && s.br < 0);
+  const count = 1 + BRANCHES.length;
+  return { start: start < 0 ? 0 : start, end: start < 0 ? count - 1 : start + count - 1, count };
+}
+
+function startTopicLoop(bi) {
+  auto.loop = 'topic';
+  auto.loopBi = bi;
+  auto.active = true;
+  auto.playing = true;
+  document.body.classList.add('autoplay', 'exploring');
+  closeList(); tip.style.opacity = 0;
+  const range = getTopicRange(bi);
+  const curBi = STEPS[auto.i]?.bi;
+  const target = (curBi === bi && auto.i >= range.start && auto.i <= range.end) ? auto.i : range.start;
+  syncPlayer();
+  goStep(target);
+  if (selected === bi) renderPanel(bi);
+}
+
+function cycleLoopMode() {
+  if (auto.loop === 'off') {
+    auto.loop = 'topic';
+    auto.loopBi = selected >= 0 ? selected : (STEPS[auto.i]?.bi ?? 0);
+  } else if (auto.loop === 'topic') {
+    auto.loop = 'all';
+    auto.loopBi = -1;
+  } else {
+    auto.loop = 'off';
+    auto.loopBi = -1;
+  }
+  syncPlayer();
+  if (selected >= 0) renderPanel(selected);
+}
 
 function setCaption(k, t, d) {
   capEl.classList.remove('show');
@@ -645,7 +686,13 @@ function clearFlash() { clearTimeout(auto.flashTimer); panel.querySelectorAll('.
 function runStep() {
   const s = STEPS[auto.i], d = DS[s.bi], n = ORDER.indexOf(d.id) + 1, b = brains[s.bi];
   const wide = isWide();
-  pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
+  if (auto.loop === 'topic') {
+    const range = getTopicRange(s.bi);
+    const stepInTopic = Math.max(0, auto.i - range.start) + 1;
+    pTitle.textContent = `${d.name} · 🔁 Loop (${stepInTopic} / ${range.count})`;
+  } else {
+    pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
+  }
   clearFlash();
   if (s.br < 0) {
     select(s.bi, null, { auto: true, flyMs: 3400 / auto.speed, noPanel: !tourPanel() });
@@ -675,10 +722,25 @@ function syncPlayer() {
   const pb = playerEl.querySelector('[data-p="panel"]'), cb = playerEl.querySelector('[data-p="caps"]');
   pb.classList.toggle('off', !auto.showPanel); pb.title = (auto.showPanel ? 'Hide' : 'Show') + ' side panel (P)';
   cb.classList.toggle('off', !auto.showCaps); cb.title = (auto.showCaps ? 'Hide' : 'Show') + ' captions (C)';
+  const lb = playerEl.querySelector('[data-p="loop"]');
+  if (lb) {
+    lb.classList.remove('off', 'topic', 'all');
+    lb.classList.add(auto.loop);
+    const topicName = DS[auto.loopBi >= 0 ? auto.loopBi : STEPS[auto.i]?.bi]?.name || 'topic';
+    lb.title = auto.loop === 'topic' ? `Looping ${topicName} (L)` : auto.loop === 'all' ? 'Looping all topics (L)' : 'Loop: Off (L)';
+  }
   document.body.classList.toggle('no-caps', !auto.showCaps);
   syncPlayBtn();
   document.body.classList.toggle('auto-paused', auto.active && !auto.playing);
   if (!auto.playing) document.body.classList.remove('idle'); else wake();
+  if (selected >= 0 && panel.classList.contains('open')) {
+    const loopBtn = panel.querySelector('.loop-topic-btn');
+    if (loopBtn) {
+      const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === selected || (auto.loopBi < 0 && STEPS[auto.i]?.bi === selected));
+      loopBtn.classList.toggle('on', isLoopingThis);
+      loopBtn.textContent = isLoopingThis && auto.playing ? '❚❚ Looping topic' : '▶ Play in loop';
+    }
+  }
 }
 function startAuto() {
   const from = selected >= 0 ? STEPS.findIndex((s) => s.bi === selected && s.br < 0) : 0;
@@ -693,6 +755,7 @@ function toggleAuto() {
   auto.playing = !auto.playing;
   if (auto.playing && selected !== STEPS[auto.i].bi) goStep(auto.i);   // user wandered off: pick up where we were
   syncPlayer();
+  if (selected >= 0) renderPanel(selected);
 }
 function setTourPanel(v) {
   auto.showPanel = v; try { localStorage.setItem('dsmap-tour-panel', v ? 'on' : 'off'); } catch (e) {}
@@ -713,26 +776,53 @@ function syncPlayBtn() {
 function stopAuto() {
   auto.active = false; auto.playing = false; clearFlash(); pulse.until = 0;
   capEl.classList.remove('show'); document.body.classList.remove('autoplay', 'auto-paused', 'idle'); syncPlayBtn();
+  if (selected >= 0) renderPanel(selected);
 }
 function autoJump(dir) {
   const cur = ORDER.indexOf(DS[STEPS[auto.i].bi].id);
   const next = (cur + dir + ORDER.length) % ORDER.length;
-  goStep(STEPS.findIndex((s) => s.bi === byId[ORDER[next]] && s.br < 0));
+  const nextBi = byId[ORDER[next]];
+  if (auto.loop === 'topic') {
+    auto.loopBi = nextBi;
+  }
+  goStep(STEPS.findIndex((s) => s.bi === nextBi && s.br < 0));
+  if (selected >= 0) renderPanel(nextBi);
 }
 function tickAuto(dt) {
   if (!auto.active) return;
   if (auto.playing) {
     auto.el += dt * 1000 * auto.speed;
     if (auto.el >= STEPS[auto.i].dur) {
-      if (auto.i >= STEPS.length - 1) { stopAuto(); deselect(); overview(2600); return; }
-      goStep(auto.i + 1);
+      if (auto.loop === 'topic') {
+        const range = getTopicRange(auto.loopBi >= 0 ? auto.loopBi : STEPS[auto.i].bi);
+        if (auto.i >= range.end) {
+          goStep(range.start);
+        } else {
+          goStep(auto.i + 1);
+        }
+      } else if (auto.i >= STEPS.length - 1) {
+        if (auto.loop === 'all') {
+          goStep(0);
+        } else {
+          stopAuto(); deselect(); overview(2600); return;
+        }
+      } else {
+        goStep(auto.i + 1);
+      }
     }
     if (!tween && !dragging) {                       // slow cinematic orbit around the current cluster
       const off = camera.position.clone().sub(controls.target).applyAxisAngle(Y, dt * .05 * auto.speed);
       camera.position.copy(controls.target).add(off);
     }
   }
-  pFill.style.width = ((auto.i + Math.min(1, auto.el / STEPS[auto.i].dur)) / STEPS.length * 100).toFixed(2) + '%';
+  if (auto.loop === 'topic') {
+    const range = getTopicRange(auto.loopBi >= 0 ? auto.loopBi : STEPS[auto.i].bi);
+    const stepInTopic = Math.max(0, auto.i - range.start);
+    const frac = (stepInTopic + Math.min(1, auto.el / STEPS[auto.i].dur)) / range.count;
+    pFill.style.width = (frac * 100).toFixed(2) + '%';
+  } else {
+    pFill.style.width = ((auto.i + Math.min(1, auto.el / STEPS[auto.i].dur)) / STEPS.length * 100).toFixed(2) + '%';
+  }
 }
 playerEl.addEventListener('click', (e) => {
   const b = e.target.closest('[data-p]'); if (!b) return;
@@ -740,6 +830,7 @@ playerEl.addEventListener('click', (e) => {
   if (p === 'toggle') toggleAuto();
   else if (p === 'next') autoJump(1);
   else if (p === 'prev') autoJump(-1);
+  else if (p === 'loop') cycleLoopMode();
   else if (p === 'stop') stopAuto();
   else if (p === 'panel') setTourPanel(!auto.showPanel);
   else if (p === 'caps') setTourCaps(!auto.showCaps);
