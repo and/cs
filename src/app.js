@@ -1207,10 +1207,54 @@ function goHome() { deselect(); activeCategory = 'all'; updateCategoryUI(); docu
 const listEl = document.getElementById('list'), listBtn = document.getElementById('listBtn');
 const treeEl = document.getElementById('tree');
 let currentView = '3d'; // '3d' | 'list' | 'tree'
-let activeTreeCategory = 'all';
+try {
+  const savedView = localStorage.getItem('csmap-view');
+  if (savedView === 'list' || savedView === 'tree' || savedView === '3d') {
+    currentView = savedView;
+  }
+} catch (e) {}
+
+let treeCollapsedSet = null;
+try {
+  const raw = localStorage.getItem('csmap-tree-collapsed');
+  if (raw) treeCollapsedSet = new Set(JSON.parse(raw));
+} catch (e) {}
+
+function isNodeCollapsed(nodeId, defaultCollapsed = false) {
+  if (treeCollapsedSet !== null) {
+    return treeCollapsedSet.has(nodeId);
+  }
+  return defaultCollapsed;
+}
+
+function saveTreeState() {
+  if (!treeEl) return;
+  const set = new Set();
+  treeEl.querySelectorAll('.tree-item.collapsed').forEach((el) => {
+    if (el.dataset.treeId) set.add(el.dataset.treeId);
+  });
+  treeCollapsedSet = set;
+  try {
+    localStorage.setItem('csmap-tree-collapsed', JSON.stringify(Array.from(set)));
+  } catch (e) {}
+}
+
+function toggleTreeItem(item, forceState = null) {
+  if (!item || !item.querySelector('.tree-children')) return;
+  const isCurrentlyCollapsed = item.classList.contains('collapsed');
+  const willBeCollapsed = forceState !== null ? forceState : !isCurrentlyCollapsed;
+  item.classList.toggle('collapsed', willBeCollapsed);
+  item.setAttribute('aria-expanded', String(!willBeCollapsed));
+  saveTreeState();
+}
 
 function setView(mode) {
   currentView = mode;
+  try { localStorage.setItem('csmap-view', mode); } catch (e) {}
+  document.body.classList.toggle('view-tree', mode === 'tree');
+  document.body.classList.toggle('view-list', mode === 'list');
+  document.body.classList.toggle('view-3d', mode === '3d');
+
   document.querySelectorAll('.view-tab').forEach((tab) => {
     const isAct = tab.dataset.view === mode;
     tab.classList.toggle('act', isAct);
@@ -1264,9 +1308,7 @@ function renderList() {
 
 function renderTree() {
   if (!treeEl) return;
-  const groupsToRender = activeTreeCategory === 'all'
-    ? Object.entries(GROUPS)
-    : Object.entries(GROUPS).filter(([k]) => k === activeTreeCategory);
+  const groupsToRender = Object.entries(GROUPS);
 
   let treeHtml = `
     <div class="tree-shell">
@@ -1294,22 +1336,16 @@ function renderTree() {
         </div>
       </div>
 
-      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;">
-        <span style="font-size:11.5px; font-weight:700; text-transform:uppercase; color:var(--mute); letter-spacing:.06em; margin-right:4px; align-self:center;">Domain:</span>
-        <button class="cat-pill${activeTreeCategory === 'all' ? ' act' : ''}" data-tree-cat="all">All</button>
-        ${Object.entries(GROUPS).map(([k, g]) => `
-          <button class="cat-pill${activeTreeCategory === k ? ' act' : ''}" data-tree-cat="${k}"><i style="background:${g.color}"></i>${esc(g.name)}</button>
-        `).join('')}
-      </div>
-
       <ul class="tree-root" role="tree" id="treeRoot">
   `;
 
   groupsToRender.forEach(([gk, g]) => {
     const groupTopics = DS.filter((d) => d.group === gk).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const dTreeId = 'd-' + gk;
+    const isDomainCollapsed = isNodeCollapsed(dTreeId, false);
 
     treeHtml += `
-      <li class="tree-item level-0" role="treeitem" aria-expanded="true">
+      <li class="tree-item level-0 ${isDomainCollapsed ? 'collapsed' : ''}" data-tree-id="${dTreeId}" role="treeitem" aria-expanded="${!isDomainCollapsed}">
         <div class="tree-row" tabindex="-1">
           <button class="tree-toggle" aria-label="Toggle domain">▼</button>
           <span class="tree-dot" style="background:${g.color}"></span>
@@ -1325,9 +1361,11 @@ function renderTree() {
       const bi = byId[d.id];
       const isDsa = bi === 0;
       const curBranches = isDsa && d.dsaBranches ? d.dsaBranches : BRANCHES;
+      const tTreeId = 't-' + d.id;
+      const isTopicCollapsed = isNodeCollapsed(tTreeId, false);
 
       treeHtml += `
-        <li class="tree-item level-1" role="treeitem" aria-expanded="true">
+        <li class="tree-item level-1 ${isTopicCollapsed ? 'collapsed' : ''}" data-tree-id="${tTreeId}" role="treeitem" aria-expanded="${!isTopicCollapsed}">
           <div class="tree-row" tabindex="-1" data-bi="${bi}">
             <button class="tree-toggle" aria-label="Toggle topic">▼</button>
             <span class="tree-dot" style="background:${g.color}"></span>
@@ -1344,9 +1382,11 @@ function renderTree() {
         // DSA: Render 6 category branches with all 24 data structures and algorithms
         curBranches.forEach((bObj) => {
           const subTopics = (bObj.ids || []).map((id) => DSA_TOPICS.find((t) => t.id === id)).filter(Boolean);
+          const bTreeId = 'b-dsa-' + bObj.key;
+          const isBranchCollapsed = isNodeCollapsed(bTreeId, true);
 
           treeHtml += `
-            <li class="tree-item level-2 collapsed" role="treeitem" aria-expanded="false">
+            <li class="tree-item level-2 ${isBranchCollapsed ? 'collapsed' : ''}" data-tree-id="${bTreeId}" role="treeitem" aria-expanded="${!isBranchCollapsed}">
               <div class="tree-row" tabindex="-1">
                 <button class="tree-toggle" aria-label="Toggle branch">▼</button>
                 <span class="tree-dot" style="background:${bObj.color}"></span>
@@ -1389,8 +1429,11 @@ function renderTree() {
         ];
 
         sections.forEach((sec) => {
+          const bTreeId = 'b-' + d.id + '-' + sec.key;
+          const isBranchCollapsed = isNodeCollapsed(bTreeId, true);
+
           treeHtml += `
-            <li class="tree-item level-2 collapsed" role="treeitem" aria-expanded="false">
+            <li class="tree-item level-2 ${isBranchCollapsed ? 'collapsed' : ''}" data-tree-id="${bTreeId}" role="treeitem" aria-expanded="${!isBranchCollapsed}">
               <div class="tree-row" tabindex="-1">
                 <button class="tree-toggle" aria-label="Toggle section">▼</button>
                 <span class="tree-dot" style="background:${sec.color}"></span>
@@ -1530,8 +1573,7 @@ function handleTreeKey(e) {
     const hasChildren = item.querySelector('.tree-children');
     if (hasChildren) {
       if (item.classList.contains('collapsed')) {
-        item.classList.remove('collapsed');
-        item.setAttribute('aria-expanded', 'true');
+        toggleTreeItem(item, false);
       } else {
         const firstChildRow = item.querySelector('.tree-children > .tree-item:not([style*="display: none"]) > .tree-row');
         if (firstChildRow) focusTreeRow(firstChildRow);
@@ -1544,8 +1586,7 @@ function handleTreeKey(e) {
     const item = activeRow.parentElement;
     const hasChildren = item.querySelector('.tree-children');
     if (hasChildren && !item.classList.contains('collapsed')) {
-      item.classList.add('collapsed');
-      item.setAttribute('aria-expanded', 'false');
+      toggleTreeItem(item, true);
     } else {
       const parentItem = item.parentElement.closest('.tree-item');
       if (parentItem) {
@@ -1572,8 +1613,7 @@ function handleTreeKey(e) {
       return;
     }
     if (item.querySelector('.tree-children')) {
-      const isCollapsed = item.classList.toggle('collapsed');
-      item.setAttribute('aria-expanded', String(!isCollapsed));
+      toggleTreeItem(item);
     }
     return;
   }
@@ -1617,19 +1657,11 @@ if (treeEl) {
     if (e.target.closest('#treeCollapseAll')) { collapseAllTree(); return; }
     if (e.target.closest('#treeCloseBtn')) { setView('3d'); return; }
 
-    const treeCatBtn = e.target.closest('[data-tree-cat]');
-    if (treeCatBtn) {
-      activeTreeCategory = treeCatBtn.dataset.treeCat;
-      renderTree();
-      return;
-    }
-
     const toggleBtn = e.target.closest('.tree-toggle');
     if (toggleBtn) {
       const item = toggleBtn.closest('.tree-item');
       if (item && item.querySelector('.tree-children')) {
-        const isCollapsed = item.classList.toggle('collapsed');
-        item.setAttribute('aria-expanded', String(!isCollapsed));
+        toggleTreeItem(item);
         const row = item.querySelector(':scope > .tree-row');
         if (row) focusTreeRow(row);
       }
@@ -1654,8 +1686,7 @@ if (treeEl) {
         return;
       }
       if (item.querySelector('.tree-children')) {
-        const isCollapsed = item.classList.toggle('collapsed');
-        item.setAttribute('aria-expanded', String(!isCollapsed));
+        toggleTreeItem(item);
       }
     }
   });
@@ -2185,6 +2216,9 @@ applyTheme();
 renderProgress(); refreshChecks();
 step(0); overview(0); paint();
 fromHash();
+if (currentView !== '3d') {
+  setView(currentView);
+}
 const t0 = performance.now(); window.__t0 = t0;
 let lastNow = t0;
 function frame(now) {
