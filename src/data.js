@@ -78,11 +78,12 @@ print(f"Top student: {top_student} ({top_score})")`,
   related: ['architecture','os','languages-compilers','theory-computation'],
   topics: DSA_TOPICS,
   dsaBranches: [
-    { key: 'linear', name: 'Linear Layouts', color: '#3B6FE0', leaf: '#BCD0F8', ids: ['array', 'string', 'linked-list', 'stack', 'queue', 'deque'] },
-    { key: 'hashing', name: 'Hashing & Caches', color: '#E0703B', leaf: '#F9D4B2', ids: ['hash-map', 'hash-set', 'lru-cache'] },
-    { key: 'trees', name: 'Trees & Heaps', color: '#2E9E6A', leaf: '#B7E2CD', ids: ['binary-tree', 'bst', 'balanced-bst', 'heap', 'trie'] },
-    { key: 'graphs', name: 'Graphs & Networks', color: '#8A4FD8', leaf: '#D8C8F4', ids: ['grid', 'graph', 'union-find'] },
-    { key: 'algorithms', name: 'Range & Algorithms', color: '#D97706', leaf: '#FDE68A', ids: ['segment-tree', 'fenwick-tree', 'binary-search', 'divide-and-conquer', 'greedy', 'backtracking', 'dynamic-programming'] }
+    { key: 'linear', name: 'Linear', color: '#3B6FE0', leaf: '#BCD0F8', ids: ['array', 'string', 'linked-list', 'stack', 'queue', 'deque'] },
+    { key: 'hashing', name: 'Hashing', color: '#E0703B', leaf: '#F9D4B2', ids: ['hash-map', 'hash-set', 'lru-cache'] },
+    { key: 'trees', name: 'Trees & heaps', color: '#2E9E6A', leaf: '#B7E2CD', ids: ['binary-tree', 'bst', 'balanced-bst', 'heap', 'trie'] },
+    { key: 'graphs', name: 'Graphs', color: '#8A4FD8', leaf: '#D8C8F4', ids: ['grid', 'graph', 'union-find'] },
+    { key: 'range', name: 'Range queries', color: '#D9447A', leaf: '#F5C3C8', ids: ['segment-tree', 'fenwick-tree'] },
+    { key: 'algorithms', name: 'Algorithms', color: '#0EA5E9', leaf: '#BAE6FD', ids: ['binary-search', 'divide-and-conquer', 'greedy', 'backtracking', 'dynamic-programming'] }
   ],
 },
 

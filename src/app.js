@@ -547,8 +547,9 @@ cv.addEventListener('pointerleave', () => { hovered = -1; tip.style.opacity = 0;
 
 // ---------- panel ----------
 const panel = document.getElementById('panel');
+let activeDsaTab = 'all';
 
-function openDsaTopic(id) {
+function openDsaTopic(id, fly = true) {
   selectedDsaTopic = id;
   select(0, null, { keepSub: true });
   const leafNodeIdx = nodes.findIndex((nd) => nd.bi === 0 && nd.dsaTopicId === id);
@@ -558,14 +559,15 @@ function openDsaTopic(id) {
     selectedLeaf = nd.item;
     pulse.set = new Set([leafNodeIdx]);
     pulse.until = performance.now() + 2500;
-    focusLeaf(0, nd.branch, nd.item, 850);
-  } else {
+    if (fly) focusLeaf(0, nd.branch, nd.item, 850);
+  } else if (fly) {
     focusCam(0, 900);
   }
 }
 
 function renderPanel(bi) {
   const d = DS[bi], g = GROUPS[d.group], idx = ORDER.indexOf(d.id), isDone = done.has(d.id);
+  const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === bi || (auto.loopBi < 0 && STEPS[auto.i]?.bi === bi));
 
   // If viewing a detailed DSA subtopic under the DSA node:
   if (bi === 0 && selectedDsaTopic) {
@@ -584,6 +586,9 @@ function renderPanel(bi) {
       <div class="p-actions">
         <button class="learned ${subDone ? 'on' : ''}" data-act="learn-sub" data-sub="${sub.id}">
           ${subDone ? '✓ Understood' : 'Mark as understood'}
+        </button>
+        <button class="loop-topic-btn ${isLoopingThis ? 'on' : ''}" data-act="loop-topic" title="Loop all 24 topics of Data Structures & Algorithms">
+          ${isLoopingThis && auto.playing ? '❚❚ Looping 24 DSA Topics' : '▶ Play in loop'}
         </button>
       </div>
 
@@ -640,35 +645,39 @@ function renderPanel(bi) {
     </table>`;
   const list = (B) => `<h3 data-sec="${B.key}"><i style="background:${B.color}"></i>${esc(B.name)}</h3>
     <ul class="items" style="--c:${B.color}">${d[B.key].map((x, j) => `<li data-item="${B.key}-${j}">${esc(x)}</li>`).join('')}</ul>`;
-  const isLoopingThis = auto.active && auto.loop === 'topic' && (auto.loopBi === bi || (auto.loopBi < 0 && STEPS[auto.i]?.bi === bi));
 
   let dsaCatalogHtml = '';
   if (bi === 0) {
     dsaCatalogHtml = `
       <div class="dsa-sub-section">
         <div class="dsa-sub-header">
-          <h3><i style="background:#3B6FE0"></i>Detailed Data Structures &amp; Algorithms (${DSA_TOPICS.length})</h3>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <h3 style="margin:0;"><i style="background:#3B6FE0"></i>Detailed Data Structures &amp; Algorithms (${DSA_TOPICS.length})</h3>
+            <span style="font-size:11.5px; color:var(--mute);">24 interactive topics &amp; code</span>
+          </div>
           <div class="dsa-sub-tabs">
-            <button class="dsa-tab act" data-dsa-tab="all">All (24)</button>
-            <button class="dsa-tab" data-dsa-tab="linear"><i style="background:#3B6FE0"></i>Linear (6)</button>
-            <button class="dsa-tab" data-dsa-tab="hashing"><i style="background:#E0703B"></i>Hashing (3)</button>
-            <button class="dsa-tab" data-dsa-tab="trees"><i style="background:#2E9E6A"></i>Trees &amp; Heaps (5)</button>
-            <button class="dsa-tab" data-dsa-tab="graphs"><i style="background:#8A4FD8"></i>Graphs (3)</button>
-            <button class="dsa-tab" data-dsa-tab="range"><i style="background:#D9447A"></i>Range (2)</button>
-            <button class="dsa-tab" data-dsa-tab="algorithms"><i style="background:#D97706"></i>Algorithms (5)</button>
+            <button class="dsa-tab ${activeDsaTab === 'all' ? 'act' : ''}" data-dsa-tab="all">All (24)</button>
+            <button class="dsa-tab ${activeDsaTab === 'linear' ? 'act' : ''}" data-dsa-tab="linear"><i style="background:#3B6FE0"></i>Linear (6)</button>
+            <button class="dsa-tab ${activeDsaTab === 'hashing' ? 'act' : ''}" data-dsa-tab="hashing"><i style="background:#E0703B"></i>Hashing (3)</button>
+            <button class="dsa-tab ${activeDsaTab === 'trees' ? 'act' : ''}" data-dsa-tab="trees"><i style="background:#2E9E6A"></i>Trees &amp; heaps (5)</button>
+            <button class="dsa-tab ${activeDsaTab === 'graphs' ? 'act' : ''}" data-dsa-tab="graphs"><i style="background:#8A4FD8"></i>Graphs (3)</button>
+            <button class="dsa-tab ${activeDsaTab === 'range' ? 'act' : ''}" data-dsa-tab="range"><i style="background:#D9447A"></i>Range queries (2)</button>
+            <button class="dsa-tab ${activeDsaTab === 'algorithms' ? 'act' : ''}" data-dsa-tab="algorithms"><i style="background:#0EA5E9"></i>Algorithms (5)</button>
           </div>
         </div>
         <div class="dsa-grid" id="dsaGrid">
-          ${DSA_TOPICS.map((t) => `
-            <button class="dsa-card" data-dsa-sub="${t.id}" data-group="${t.group}">
+          ${DSA_TOPICS.map((t) => {
+            const isHidden = activeDsaTab !== 'all' && t.group !== activeDsaTab;
+            return `
+            <button class="dsa-card" data-dsa-sub="${t.id}" data-group="${t.group}" style="${isHidden ? 'display:none;' : ''}">
               <div class="dsa-card-top">
                 <span class="dsa-card-dot" style="background:${DSA_GROUPS[t.group].color}"></span>
                 <span class="dsa-card-name">${esc(t.name)}</span>
                 ${done.has(t.id) ? '<span class="done">✓</span>' : ''}
               </div>
               <p class="dsa-card-desc">${esc(t.one)}</p>
-            </button>
-          `).join('')}
+            </button>`;
+          }).join('')}
         </div>
       </div>
     `;
@@ -710,6 +719,37 @@ panel.addEventListener('click', async (e) => {
   const dsaCard = e.target.closest('[data-dsa-sub]');
   if (dsaCard) {
     openDsaTopic(dsaCard.dataset.dsaSub);
+    return;
+  }
+  const dsaTab = e.target.closest('[data-dsa-tab]');
+  if (dsaTab) {
+    activeDsaTab = dsaTab.dataset.dsaTab;
+    panel.querySelectorAll('.dsa-tab').forEach((t) => t.classList.toggle('act', t.dataset.dsaTab === activeDsaTab));
+    const grid = panel.querySelector('#dsaGrid');
+    if (grid) {
+      grid.querySelectorAll('.dsa-card').forEach((card) => {
+        const matches = activeDsaTab === 'all' || card.dataset.group === activeDsaTab;
+        card.style.display = matches ? '' : 'none';
+      });
+    }
+    if (activeDsaTab !== 'all') {
+      const bIdx = brains[0]?.curBranches?.findIndex((B) => B.key === activeDsaTab);
+      if (bIdx >= 0) {
+        selectedBranch = bIdx;
+        selectedLeaf = -1;
+        const bn = brains[0].branchIdx[bIdx];
+        const set = new Set([bn]);
+        for (let k = brains[0].first; k < brains[0].first + brains[0].count; k++) {
+          if (nodes[k].kind === 'leaf' && nodes[k].branch === bIdx) set.add(k);
+        }
+        pulse.set = set; pulse.until = performance.now() + 2500;
+        focusBranch(0, bIdx, 800);
+      }
+    } else {
+      selectedBranch = -1;
+      selectedLeaf = -1;
+      focusCam(0, 800);
+    }
     return;
   }
   const backBtn = e.target.closest('[data-act="dsa-back"]');
@@ -1217,13 +1257,23 @@ qEl.addEventListener('blur', () => setTimeout(closeSugg, 120));
 const STEPS = [];
 ORDER.forEach((id) => {
   const bi = byId[id];
-  STEPS.push({ bi, br: -1, dur: 6800 });
-  const curB = brains[bi].curBranches || BRANCHES;
-  curB.forEach((B, a) => {
-    const itLen = B.ids ? B.ids.length : (DS[bi][B.key]?.length || 3);
-    STEPS.push({ bi, br: a, dur: 3200 + 300 * Math.min(itLen, 6) });
-  });
+  if (bi === 0) {
+    // DSA: High-level overview + all 24 detailed sub-topics in order
+    STEPS.push({ bi: 0, br: -1, subId: null, dur: 5500 });
+    DSA_TOPICS.forEach((t) => {
+      const bIdx = brains[0]?.curBranches?.findIndex((B) => B.ids && B.ids.includes(t.id));
+      STEPS.push({ bi: 0, br: bIdx >= 0 ? bIdx : 0, subId: t.id, dur: 4200 });
+    });
+  } else {
+    STEPS.push({ bi, br: -1, dur: 6800 });
+    const curB = brains[bi].curBranches || BRANCHES;
+    curB.forEach((B, a) => {
+      const itLen = B.ids ? B.ids.length : (DS[bi][B.key]?.length || 3);
+      STEPS.push({ bi, br: a, dur: 3200 + 300 * Math.min(itLen, 6) });
+    });
+  }
 });
+
 const SPEEDS = [.5, 1, 1.5, 2];
 const auto = { active: false, playing: false, i: 0, el: 0, speed: 1, flashTimer: 0, showPanel: true, showCaps: true, loop: 'off', loopBi: -1 };
 try { auto.showPanel = localStorage.getItem('csmap-tour-panel') !== 'off'; auto.showCaps = localStorage.getItem('csmap-tour-caps') !== 'off'; } catch (e) {}
@@ -1234,9 +1284,12 @@ const pTitle = playerEl.querySelector('.pt'), pFill = playerEl.querySelector('.p
 
 function getTopicRange(bi) {
   const start = STEPS.findIndex((s) => s.bi === bi && s.br < 0);
-  const curB = brains[bi]?.curBranches || BRANCHES;
-  const count = 1 + curB.length;
-  return { start: start < 0 ? 0 : start, end: start < 0 ? count - 1 : start + count - 1, count };
+  let end = start;
+  for (let k = start; k < STEPS.length && STEPS[k].bi === bi; k++) {
+    end = k;
+  }
+  const count = end >= start ? end - start + 1 : 1;
+  return { start: start < 0 ? 0 : start, end: end < 0 ? 0 : end, count };
 }
 
 function startTopicLoop(bi) {
@@ -1247,8 +1300,11 @@ function startTopicLoop(bi) {
   document.body.classList.add('autoplay', 'exploring');
   closeList(); tip.style.opacity = 0;
   const range = getTopicRange(bi);
-  const curBi = STEPS[auto.i]?.bi;
-  const target = (curBi === bi && auto.i >= range.start && auto.i <= range.end) ? auto.i : range.start;
+  let target = range.start;
+  if (bi === 0 && selectedDsaTopic) {
+    const subStep = STEPS.findIndex((s) => s.bi === 0 && s.subId === selectedDsaTopic);
+    if (subStep >= 0) target = subStep;
+  }
   syncPlayer();
   goStep(target);
   if (selected === bi) renderPanel(bi);
@@ -1280,25 +1336,48 @@ function clearFlash() { clearTimeout(auto.flashTimer); panel.querySelectorAll('.
 function runStep() {
   const s = STEPS[auto.i], d = DS[s.bi], n = ORDER.indexOf(d.id) + 1, b = brains[s.bi];
   const wide = isWide();
-  if (auto.loop === 'topic') {
-    const range = getTopicRange(s.bi);
-    const stepInTopic = Math.max(0, auto.i - range.start) + 1;
-    pTitle.textContent = `${d.name} · 🔁 Loop (${stepInTopic} / ${range.count})`;
-  } else {
-    pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
-  }
+
   clearFlash();
-  if (s.br < 0) {
+
+  if (s.subId) {
+    // Stepping through a detailed DSA subtopic
+    const sub = DSA_TOPICS.find((t) => t.id === s.subId);
+    openDsaTopic(s.subId, true);
+    pulse.until = performance.now() + s.dur / auto.speed;
+    const subIdx = DSA_ORDER.indexOf(s.subId) + 1;
+    pTitle.textContent = `DSA: ${sub.name} (${subIdx} / ${DSA_TOPICS.length}) · 🔁 Loop`;
+    setCaption(
+      `DSA (${subIdx}/${DSA_TOPICS.length}) · ${DSA_GROUPS[sub.group].name} · ${DSA_LEVELS[sub.level]}`,
+      sub.name,
+      sub.one
+    );
+  } else if (s.br < 0) {
+    // Topic overview
+    selectedDsaTopic = null;
     select(s.bi, null, { auto: true, flyMs: 3400 / auto.speed, noPanel: !tourPanel() });
     if (wide) panel.scrollTo({ top: 0, behavior: 'smooth' });
     pulse.set = new Set([b.core]); pulse.until = performance.now() + s.dur / auto.speed;
+    if (auto.loop === 'topic') {
+      const range = getTopicRange(s.bi);
+      pTitle.textContent = `${d.name} · 🔁 Loop (1 / ${range.count})`;
+    } else {
+      pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
+    }
     setCaption(`${String(n).padStart(2, '0')} / ${ORDER.length} · ${GROUPS[d.group].name} · ${LEVELS[d.level]}`, d.name, d.one);
   } else {
+    // Branch step
     const curB = b.curBranches || BRANCHES;
     const B = curB[s.br], bn = b.branchIdx[s.br];
     const set = new Set([bn]); for (let k = b.first; k < b.first + b.count; k++) if (nodes[k].kind === 'leaf' && nodes[k].branch === s.br) set.add(k);
     pulse.set = set; pulse.until = performance.now() + s.dur / auto.speed;
     const items = B.ids ? B.ids.map((id) => DSA_TOPICS.find((x) => x.id === id)?.name || id) : (d[B.key] || []).slice(0, 5).map((x) => Array.isArray(x) ? `${x[0]}: ${x[1]}` : x);
+    if (auto.loop === 'topic') {
+      const range = getTopicRange(s.bi);
+      const stepInTopic = Math.max(0, auto.i - range.start) + 1;
+      pTitle.textContent = `${d.name} · 🔁 Loop (${stepInTopic} / ${range.count})`;
+    } else {
+      pTitle.textContent = `${d.name} · ${n} / ${ORDER.length}`;
+    }
     setCaption(`${String(n).padStart(2, '0')} · ${d.name}`, B.name, items.join('  ·  '));
     if (panel.classList.contains('open')) {
       const h = panel.querySelector(`[data-sec="${B.key}"]`);
@@ -1308,6 +1387,7 @@ function runStep() {
     }
   }
 }
+
 function goStep(i) { auto.i = Math.max(0, Math.min(STEPS.length - 1, i)); auto.el = 0; runStep(); }
 function syncPlayer() {
   ppBtn.innerHTML = auto.playing
@@ -1374,12 +1454,16 @@ function stopAuto() {
   if (selected >= 0) renderPanel(selected);
 }
 function autoJump(dir) {
+  if (auto.loop === 'topic') {
+    const range = getTopicRange(auto.loopBi >= 0 ? auto.loopBi : STEPS[auto.i].bi);
+    const curOffset = auto.i - range.start;
+    const nextOffset = (curOffset + dir + range.count) % range.count;
+    goStep(range.start + nextOffset);
+    return;
+  }
   const cur = ORDER.indexOf(DS[STEPS[auto.i].bi].id);
   const next = (cur + dir + ORDER.length) % ORDER.length;
   const nextBi = byId[ORDER[next]];
-  if (auto.loop === 'topic') {
-    auto.loopBi = nextBi;
-  }
   goStep(STEPS.findIndex((s) => s.bi === nextBi && s.br < 0));
   if (selected >= 0) renderPanel(nextBi);
 }
